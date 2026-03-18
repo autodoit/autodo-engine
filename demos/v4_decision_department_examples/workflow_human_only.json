@@ -1,0 +1,40 @@
+{
+  "graph_uid": "graph-v4-decision-department-human-only",
+  "graph_name": "v4 决策部门示例 - HUMAN only",
+  "graph_version": "0.1.0",
+  "policies": {
+    "decision_department": {
+      "intervention_condition": "always",
+      "members": ["human"],
+      "decision_mode": "HUMAN-only"
+    }
+  },
+  "nodes": [
+    {
+      "node_uid": "node-start",
+      "node_type": "start",
+      "affair_uid": "affair-start",
+      "policies": {},
+      "enabled": true
+    },
+    {
+      "node_uid": "node-decision",
+      "node_type": "process",
+      "affair_uid": "affair-decision",
+      "risk_level": "high",
+      "policies": {
+        "route_mode": "decision",
+        "simulate_receipt": {
+          "result_code": "BLOCKED",
+          "block_reason_code": "human_confirmation_required",
+          "block_scope": "node",
+          "requires_human": true,
+          "retryable": false,
+          "message": "高风险动作必须人工确认"
+        }
+      },
+      "enabled": true
+    }
+  ],
+  "edges": []
+}

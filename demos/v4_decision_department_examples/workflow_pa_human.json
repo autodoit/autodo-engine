@@ -1,0 +1,40 @@
+{
+  "graph_uid": "graph-v4-decision-department-pa-human",
+  "graph_name": "v4 决策部门示例 - PA + HUMAN",
+  "graph_version": "0.1.0",
+  "policies": {
+    "decision_department": {
+      "intervention_condition": "abnormal_upgrade",
+      "members": ["pa", "human"],
+      "decision_mode": "JOINT"
+    }
+  },
+  "nodes": [
+    {
+      "node_uid": "node-start",
+      "node_type": "start",
+      "affair_uid": "affair-start",
+      "policies": {},
+      "enabled": true
+    },
+    {
+      "node_uid": "node-decision",
+      "node_type": "process",
+      "affair_uid": "affair-decision",
+      "risk_level": "critical",
+      "policies": {
+        "route_mode": "decision",
+        "simulate_receipt": {
+          "result_code": "BLOCKED",
+          "block_reason_code": "policy_denied",
+          "block_scope": "affair",
+          "requires_human": true,
+          "retryable": false,
+          "message": "策略拒绝并需要联合裁决"
+        }
+      },
+      "enabled": true
+    }
+  ],
+  "edges": []
+}

@@ -1,0 +1,62 @@
+{
+  "graph_uid": "graph-v4-decision-department-pa-only",
+  "graph_name": "v4 决策部门示例 - PA only",
+  "graph_version": "0.1.0",
+  "policies": {
+    "decision_department": {
+      "intervention_condition": "abnormal_upgrade",
+      "members": ["pa"],
+      "decision_mode": "PA-only"
+    }
+  },
+  "nodes": [
+    {
+      "node_uid": "node-start",
+      "node_type": "start",
+      "affair_uid": "affair-start",
+      "policies": {},
+      "enabled": true
+    },
+    {
+      "node_uid": "node-decision",
+      "node_type": "process",
+      "affair_uid": "affair-decision",
+      "risk_level": "normal",
+      "policies": {
+        "route_mode": "decision",
+        "simulate_receipt": {
+          "result_code": "BLOCKED",
+          "block_reason_code": "goal_ambiguous",
+          "block_scope": "node",
+          "requires_human": false,
+          "retryable": true,
+          "message": "目标不明确，交由PA裁决"
+        }
+      },
+      "enabled": true
+    },
+    {
+      "node_uid": "node-end",
+      "node_type": "end",
+      "affair_uid": "affair-end",
+      "policies": {
+        "goal_satisfied_at_node": true
+      },
+      "enabled": true
+    }
+  ],
+  "edges": [
+    {
+      "edge_uid": "edge-start-to-decision",
+      "from_node_uid": "node-start",
+      "to_node_uid": "node-decision",
+      "enabled": true
+    },
+    {
+      "edge_uid": "edge-decision-to-end",
+      "from_node_uid": "node-decision",
+      "to_node_uid": "node-end",
+      "enabled": true
+    }
+  ]
+}

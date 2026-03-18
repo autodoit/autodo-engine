@@ -1,0 +1,61 @@
+{
+  "graph_uid": "graph-v3-decision-framework-pa-human",
+  "graph_name": "v3 决策规则框架示例 - PA + human",
+  "graph_version": "0.1.0",
+  "policies": {
+    "decision_rule_framework": {
+      "intervention_condition": "abnormal_upgrade",
+      "intervention_actors": ["pa"]
+    }
+  },
+  "nodes": [
+    {
+      "node_uid": "node-start",
+      "node_type": "start",
+      "affair_uid": "affair-start",
+      "policies": {},
+      "enabled": true
+    },
+    {
+      "node_uid": "node-decision",
+      "node_type": "process",
+      "affair_uid": "affair-decision",
+      "policies": {
+        "route_mode": "decision",
+        "decision_rule_framework": {
+          "intervention_condition": "always",
+          "intervention_actors": ["pa", "human"]
+        },
+        "simulate_receipt": {
+          "result_code": "PASS",
+          "output_payload": {},
+          "message": "PA 先给建议，再由人工最终确认"
+        }
+      },
+      "enabled": true
+    },
+    {
+      "node_uid": "node-end",
+      "node_type": "end",
+      "affair_uid": "affair-end",
+      "policies": {
+        "goal_satisfied_at_node": true
+      },
+      "enabled": true
+    }
+  ],
+  "edges": [
+    {
+      "edge_uid": "edge-start-to-decision",
+      "from_node_uid": "node-start",
+      "to_node_uid": "node-decision",
+      "enabled": true
+    },
+    {
+      "edge_uid": "edge-decision-to-end",
+      "from_node_uid": "node-decision",
+      "to_node_uid": "node-end",
+      "enabled": true
+    }
+  ]
+}
