@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import tempfile
+from hashlib import sha256
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List
@@ -24,6 +26,7 @@ from autodoengine.taskdb import (
 )
 from autodoengine.taskdb.storage_paths import get_runtime_store_dirs, get_runtime_store_files
 from autodoengine.utils.affair_registry import build_registry, resolve_runner
+from autodoengine.utils.common.affair_manager import import_user_affair as _import_user_affair
 from autodoengine.utils.common.affair_sync import SCHEMA_VERSION, build_runtime_registry, get_affair_registry_paths as _get_affair_registry_paths, sync_affair_databases
 from autodoengine.utils.path_tools import load_json_or_py, resolve_paths_to_absolute
 
@@ -104,6 +107,34 @@ def _serialize_dataclass_or_value(value: Any) -> Any:
     if hasattr(value, "__dataclass_fields__"):
         return asdict(value)
     return value
+
+
+def _load_module_from_file(source_py_path: str | Path) -> Any:
+    """按源码文件路径加载事务模块。
+
+    Args:
+        source_py_path: 事务源码路径。
+
+    Returns:
+        Python 模块对象。
+
+    Raises:
+        FileNotFoundError: 文件不存在时抛出。
+        ImportError: 文件无法加载为模块时抛出。
+    """
+
+    source_path = Path(source_py_path).resolve()
+    if not source_path.exists():
+        raise FileNotFoundError(f"事务源码文件不存在：{source_path}")
+
+    module_name = f"autodoengine_dynamic_affair_{sha256(str(source_path).encode('utf-8')).hexdigest()[:16]}"
+    spec = importlib.util.spec_from_file_location(module_name, source_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"无法加载事务源码模块：{source_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def load_graph(file_path: str) -> Graph:
@@ -401,7 +432,59 @@ def import_affair_module(affair_uid: str, *, workspace_root: str | Path | None =
     workspace = _normalize_workspace_root(workspace_root)
     registry = build_registry(strict=strict, workspace_root=workspace)
     runner = resolve_runner(affair_uid, registry)
-    return importlib.import_module(str(runner["module"]))
+    module_name = str(runner.get("module") or "").strip()
+    source_py_path = str(runner.get("source_py_path") or "").strip()
+    if module_name:
+        return importlib.import_module(module_name)
+    if source_py_path:
+        return _load_module_from_file(source_py_path)
+    raise ValueError(f"事务[{affair_uid}] 缺少可导入入口（runner.module/source_py_path）")
+
+
+def import_user_affair(
+    *,
+    source_py_path: str | Path,
+    workspace_root: str | Path,
+    source_params_json_path: str | Path | None = None,
+    source_doc_md_path: str | Path | None = None,
+    affair_name: str | None = None,
+    strict: bool = False,
+) -> Dict[str, Any]:
+    """导入用户功能程序为事务三件套并注册到事务管理系统。
+
+    Args:
+        source_py_path: 功能程序文件路径。
+        workspace_root: 用户工作区根目录。
+        source_params_json_path: 参数模板 JSON 路径，可选。
+        source_doc_md_path: 说明文档 MD 路径，可选。
+        affair_name: 事务名称，可选。
+        strict: 严格模式，数据库同步有错误时抛异常。
+
+    Returns:
+        导入摘要字典。
+    """
+
+    result = _import_user_affair(
+        workspace_root=Path(workspace_root).resolve(),
+        source_py_path=Path(source_py_path).resolve(),
+        source_params_json_path=Path(source_params_json_path).resolve() if source_params_json_path is not None else None,
+        source_doc_md_path=Path(source_doc_md_path).resolve() if source_doc_md_path is not None else None,
+        affair_name=affair_name,
+        strict=strict,
+    )
+
+    return {
+        "requested_name": result.requested_name,
+        "final_name": result.final_name,
+        "affair_uid": result.affair_uid,
+        "renamed": result.renamed,
+        "affair_dir": str(result.affair_dir),
+        "source_py_path": str(result.source_py_path),
+        "params_json_path": str(result.params_json_path),
+        "doc_md_path": str(result.doc_md_path),
+        "collision_history": list(result.collision_history),
+        "warnings": list(result.warnings),
+    }
 
 
 def run_affair(
@@ -439,7 +522,14 @@ def run_affair(
     registry = build_registry(strict=strict, workspace_root=workspace)
     runner = resolve_runner(uid, registry)
 
-    module = importlib.import_module(str(runner["module"]))
+    module_name = str(runner.get("module") or "").strip()
+    source_py_path = str(runner.get("source_py_path") or "").strip()
+    if module_name:
+        module = importlib.import_module(module_name)
+    elif source_py_path:
+        module = _load_module_from_file(source_py_path)
+    else:
+        raise ValueError(f"事务[{uid}] 缺少可导入入口（runner.module/source_py_path）")
     callable_obj = getattr(module, str(runner["callable"]))
 
     merged_kwargs: Dict[str, Any] = {}

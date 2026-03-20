@@ -43,12 +43,14 @@ def create_empty_registry(*, schema_version: str) -> Dict[str, Any]:
     return {
         "schema_version": schema_version,
         "generated_at": now_iso(),
+        "registry_role": "affair_management_system",
         "records": [],
         "stats": {
             "aok_graph": 0,
             "aok_business": 0,
             "user_business": 0,
             "invalid": 0,
+            "total": 0,
         },
     }
 
@@ -89,10 +91,12 @@ def load_registry(db_path: Path, *, schema_version: str) -> Dict[str, Any]:
 
     data.setdefault("schema_version", schema_version)
     data.setdefault("generated_at", now_iso())
+    data.setdefault("registry_role", "affair_management_system")
     data["stats"].setdefault("aok_graph", 0)
     data["stats"].setdefault("aok_business", 0)
     data["stats"].setdefault("user_business", 0)
     data["stats"].setdefault("invalid", 0)
+    data["stats"].setdefault("total", len(data.get("records") or []))
     return data
 
 

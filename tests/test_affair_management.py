@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from autodoengine.api import import_user_affair
 from autodoengine.utils.affair_registry import build_registry
 from autodoengine.utils.common.affair_sync import build_runtime_registry, sync_affair_databases
 
@@ -52,6 +53,27 @@ class TestAffairManagement(unittest.TestCase):
         }
         (affair_dir / "affair.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
         (affair_dir / "affair.py").write_text("def execute(config_path, **kwargs):\n    return {}\n", encoding="utf-8")
+        (affair_dir / "affair.md").write_text("# 示例事务\n", encoding="utf-8")
+
+    def _write_pure_user_affair(self, *, workspace_root: Path, affair_name: str) -> None:
+        """写入纯三件套用户事务样例。
+
+        Args:
+            workspace_root: 用户工作区根目录。
+            affair_name: 事务目录名。
+
+        Returns:
+            None。
+        """
+
+        affair_dir = workspace_root / ".autodokit" / "affairs" / affair_name
+        affair_dir.mkdir(parents=True, exist_ok=True)
+        (affair_dir / "affair.py").write_text(
+            "def execute(config_path, **kwargs):\n    return [config_path]\n",
+            encoding="utf-8",
+        )
+        (affair_dir / "affair.json").write_text(json.dumps({"input_path": "./input"}, ensure_ascii=False, indent=2), encoding="utf-8")
+        (affair_dir / "affair.md").write_text("# 纯事务\n\n用于测试。\n", encoding="utf-8")
 
     def test_sync_official_registry_success(self) -> None:
         """官方事务库可成功同步并产出统计。"""
@@ -97,6 +119,59 @@ class TestAffairManagement(unittest.TestCase):
 
         self.assertIn("CAJ文件转PDF", registry)
         self.assertEqual(str(registry["CAJ文件转PDF"].get("owner")), "user")
+
+    def test_pure_triplet_affair_sync_success(self) -> None:
+        """纯三件套事务可被同步并产出新版字段。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            self._write_pure_user_affair(workspace_root=workspace, affair_name="纯事务示例")
+
+            result = sync_affair_databases(workspace_root=workspace, strict=False)
+            target = next(item for item in result.records if str(item.get("affair_uid")) == "纯事务示例")
+
+        self.assertEqual(str(target.get("display_name")), "纯事务示例")
+        self.assertEqual(str(target.get("folder_name")), "纯事务示例")
+        self.assertIn("source_py_path", target)
+        self.assertIn("params_json_path", target)
+        self.assertIn("doc_md_path", target)
+        self.assertIn("record_uid", target)
+        self.assertEqual(str(target.get("owner")), "user")
+
+    def test_import_user_affair_auto_rename(self) -> None:
+        """导入同名事务时应自动追加 _v正整数 后缀。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            source_py = workspace / "demo_affair.py"
+            source_json = workspace / "demo_affair.json"
+            source_md = workspace / "demo_affair.md"
+
+            source_py.write_text("def execute(config_path, **kwargs):\n    return [config_path]\n", encoding="utf-8")
+            source_json.write_text(json.dumps({"x": 1}, ensure_ascii=False, indent=2), encoding="utf-8")
+            source_md.write_text("# demo\n", encoding="utf-8")
+
+            first = import_user_affair(
+                source_py_path=source_py,
+                source_params_json_path=source_json,
+                source_doc_md_path=source_md,
+                affair_name="导入事务",
+                workspace_root=workspace,
+                strict=False,
+            )
+
+            second = import_user_affair(
+                source_py_path=source_py,
+                source_params_json_path=source_json,
+                source_doc_md_path=source_md,
+                affair_name="导入事务",
+                workspace_root=workspace,
+                strict=False,
+            )
+
+        self.assertEqual(str(first.get("final_name")), "导入事务")
+        self.assertEqual(str(second.get("final_name")), "导入事务_v2")
+        self.assertTrue(bool(second.get("renamed")))
 
 
 if __name__ == "__main__":

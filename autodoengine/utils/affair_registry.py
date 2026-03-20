@@ -342,14 +342,16 @@ def resolve_runner(affair_name: str, registry: Mapping[str, Mapping[str, Any]]) 
     manifest = registry[key]
     runner = manifest.get("runner") if isinstance(manifest.get("runner"), Mapping) else {}
     module = _normalize_runner_module(str(runner.get("module") or "").strip())
+    source_py_path = str(runner.get("source_py_path") or manifest.get("source_py_path") or "").strip()
     callable_name = str(runner.get("callable") or "execute").strip() or "execute"
     pass_mode = str(runner.get("pass_mode") or "config_path").strip() or "config_path"
-    if not module:
-        raise ValueError(f"事务[{key}] 缺少 runner.module")
+    if not module and not source_py_path:
+        raise ValueError(f"事务[{key}] 缺少 runner.module 或 runner.source_py_path")
     if pass_mode not in {"config_path", "config_dict"}:
         raise ValueError(f"事务[{key}] runner.pass_mode 非法：{pass_mode}")
     return {
         "module": module,
+        "source_py_path": source_py_path,
         "callable": callable_name,
         "pass_mode": pass_mode,
         "kwargs": dict(runner.get("kwargs") or {}) if isinstance(runner.get("kwargs"), Mapping) else {},

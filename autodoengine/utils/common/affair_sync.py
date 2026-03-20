@@ -15,7 +15,7 @@ from autodoengine.utils.common.affair_permissions import can_user_override, vali
 from autodoengine.utils.common.affair_registry import build_records_from_root
 
 
-SCHEMA_VERSION = "2026-03-12"
+SCHEMA_VERSION = "2026-03-19"
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,21 @@ def default_aok_db_path() -> Path:
         'affair_registry.json'
     """
 
-    return (Path(__file__).resolve().parents[4] / "config" / "affair_registry.json").resolve()
+    return (Path(__file__).resolve().parents[3] / "config" / "affair_registry.json").resolve()
+
+
+def default_aok_metadata_overrides_path() -> Path:
+    """返回官方事务元数据覆盖文件路径。
+
+    Returns:
+        引擎仓中的 `config/affair_metadata_overrides.json` 绝对路径。
+
+    Examples:
+        >>> default_aok_metadata_overrides_path().name
+        'affair_metadata_overrides.json'
+    """
+
+    return (Path(__file__).resolve().parents[3] / "config" / "affair_metadata_overrides.json").resolve()
 
 
 def default_user_db_path(workspace_root: Path) -> Path:
@@ -125,6 +139,7 @@ def get_affair_registry_paths(workspace_root: Path | None) -> Dict[str, Path]:
     payload: Dict[str, Path] = {
         "aok_affairs_root": default_aok_affairs_root(),
         "aok_db_path": default_aok_db_path(),
+        "aok_metadata_overrides_path": default_aok_metadata_overrides_path(),
     }
     if workspace_root is not None:
         resolved_workspace = workspace_root.resolve()

@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Mapping
 
-from autodoengine.utils.common.affair_sync import default_aok_affairs_root
+from autodoengine.utils.common.affair_sync import build_runtime_registry, default_aok_affairs_root
 from autodoengine.utils.affair_registry import scan_affairs
 
 from .models import Node, NodeContent, NodePort, FlowGraphError
@@ -214,6 +214,67 @@ def _load_affair_template_from_manifest(manifest_path: Path) -> NodeTemplate | N
     )
 
 
+def _load_affair_template_from_runtime_record(record: Mapping[str, Any]) -> NodeTemplate | None:
+    """从事务数据库记录构造节点模板。
+
+    Args:
+        record: 事务数据库记录。
+
+    Returns:
+        NodeTemplate；若记录缺少 node_template 则返回 None。
+
+    Raises:
+        FlowGraphError: 字段结构非法时抛出。
+    """
+
+    affair_uid = str(record.get("affair_uid") or "").strip()
+    node_meta = record.get("node_template") if isinstance(record.get("node_template"), Mapping) else {}
+    if not affair_uid or not node_meta:
+        return None
+
+    node_type = str(node_meta.get("node_type") or "").strip()
+    if not node_type:
+        raise FlowGraphError(f"事务[{affair_uid}] 的 node_template.node_type 不能为空")
+
+    affair_type = str(node_meta.get("affair_type") or affair_uid).strip()
+    raw_payload = node_meta.get("payload_defaults") or {}
+    if not isinstance(raw_payload, Mapping):
+        raise FlowGraphError(f"事务[{affair_uid}] 的 node_template.payload_defaults 必须是对象")
+
+    raw_inputs = node_meta.get("inputs") or {}
+    raw_outputs = node_meta.get("outputs") or {}
+    if not isinstance(raw_inputs, Mapping) or not isinstance(raw_outputs, Mapping):
+        raise FlowGraphError(f"事务[{affair_uid}] 的 node_template.inputs/outputs 必须是对象")
+
+    flags = node_meta.get("flags") if isinstance(node_meta.get("flags"), Mapping) else {}
+    allow_multi_input_ports_raw = flags.get("allow_multi_input_ports") or []
+    if not isinstance(allow_multi_input_ports_raw, list):
+        raise FlowGraphError(f"事务[{affair_uid}] 的 node_template.flags.allow_multi_input_ports 必须是列表")
+
+    base_config = node_meta.get("config") or {}
+    if not isinstance(base_config, Mapping):
+        raise FlowGraphError(f"事务[{affair_uid}] 的 node_template.config 必须是对象")
+
+    template_id = affair_uid
+    return NodeTemplate(
+        id=template_id,
+        uid=_make_template_uid(template_id),
+        content_kind="affair",
+        content_ref=affair_uid,
+        content_payload=dict(raw_payload),
+        node_type=node_type,
+        is_leaf=bool(flags.get("is_leaf", False)),
+        is_business_node=bool(flags.get("is_business", True)),
+        is_graph_node=bool(flags.get("is_graph", False)),
+        allow_multi_input_ports=[
+            str(item).strip() for item in allow_multi_input_ports_raw if str(item).strip()
+        ],
+        input_ports=_coerce_ports(raw_inputs, manifest_path=Path(f"runtime://{affair_uid}"), field_name="inputs"),
+        output_ports=_coerce_ports(raw_outputs, manifest_path=Path(f"runtime://{affair_uid}"), field_name="outputs"),
+        affair={"type": affair_type, "config": dict(base_config)},
+    )
+
+
 def _read_json(path: Path) -> Dict[str, Any]:
     """读取 JSON 文件。
 
@@ -347,13 +408,28 @@ def load_node_templates(templates_dir: str | Path | None = None) -> Dict[str, No
     _ = templates_dir
     templates: Dict[str, NodeTemplate] = {"subgraph_call": _build_subgraph_template()}
 
-    for manifest_path in scan_affairs(_default_affairs_root()):
-        tmpl = _load_affair_template_from_manifest(manifest_path)
+    runtime_registry = build_runtime_registry(workspace_root=None, strict=False)
+    loaded_from_db = 0
+    for record in runtime_registry.values():
+        try:
+            tmpl = _load_affair_template_from_runtime_record(record)
+        except FlowGraphError:
+            tmpl = None
         if tmpl is None:
             continue
         if tmpl.id in templates:
             raise FlowGraphError(f"节点模板 id 重复：{tmpl.id}")
         templates[tmpl.id] = tmpl
+        loaded_from_db += 1
+
+    if loaded_from_db == 0:
+        for manifest_path in scan_affairs(_default_affairs_root()):
+            tmpl = _load_affair_template_from_manifest(manifest_path)
+            if tmpl is None:
+                continue
+            if tmpl.id in templates:
+                raise FlowGraphError(f"节点模板 id 重复：{tmpl.id}")
+            templates[tmpl.id] = tmpl
 
     return templates
 

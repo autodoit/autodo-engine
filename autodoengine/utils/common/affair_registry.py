@@ -17,6 +17,32 @@ from autodoengine.utils.common.affair_permissions import validate_domain_owner
 PASS_MODE_SET = {"config_path", "config_dict"}
 
 
+def _load_aok_metadata_overrides() -> Dict[str, Dict[str, Any]]:
+    """读取官方事务元数据覆盖表。
+
+    Returns:
+        `affair_name -> metadata` 映射。
+    """
+
+    path = (Path(__file__).resolve().parents[3] / "config" / "affair_metadata_overrides.json").resolve()
+    if not path.exists():
+        return {}
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+    if not isinstance(data, Mapping):
+        return {}
+
+    output: Dict[str, Dict[str, Any]] = {}
+    for key, value in data.items():
+        if isinstance(value, Mapping):
+            output[str(key)] = dict(value)
+    return output
+
+
 def scan_affair_manifests(root: Path) -> List[Path]:
     """扫描目录下所有事务清单。
 
@@ -34,7 +60,14 @@ def scan_affair_manifests(root: Path) -> List[Path]:
 
     if not root.exists():
         return []
-    return sorted(root.glob("*/affair.json"))
+
+    manifests: List[Path] = []
+    for affair_dir in sorted(root.iterdir()):
+        if not affair_dir.is_dir():
+            continue
+        if any((affair_dir / name).exists() for name in ("affair.py", "affair.json", "affair.md")):
+            manifests.append((affair_dir / "affair.json").resolve())
+    return manifests
 
 
 def read_manifest(manifest_path: Path) -> Dict[str, Any]:
@@ -53,6 +86,9 @@ def read_manifest(manifest_path: Path) -> Dict[str, Any]:
         >>> from pathlib import Path
         >>> _ = read_manifest(Path("not_exists_affair.json"))
     """
+
+    if not manifest_path.exists():
+        raise ValueError(f"读取事务清单失败：{manifest_path}：文件不存在")
 
     try:
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -82,32 +118,21 @@ def validate_manifest(item: Mapping[str, Any], *, affair_dir: Path) -> Tuple[Lis
     errors: List[str] = []
     warnings: List[str] = []
 
-    dir_name = affair_dir.name
-    name = str(item.get("name") or "").strip()
-    if not name:
-        errors.append(f"{affair_dir}: 缺少 name")
-    elif name != dir_name:
-        errors.append(f"{affair_dir}: name 与目录名不一致（name={name}, dir={dir_name}）")
-
-    runner = item.get("runner") if isinstance(item.get("runner"), Mapping) else {}
-    module = str(runner.get("module") or "").strip()
-    callable_name = str(runner.get("callable") or "").strip()
-    pass_mode = str(runner.get("pass_mode") or "").strip()
-    if not module:
-        errors.append(f"{affair_dir}: runner.module 不能为空")
-    if not callable_name:
-        errors.append(f"{affair_dir}: runner.callable 不能为空")
-    if pass_mode not in PASS_MODE_SET:
-        errors.append(f"{affair_dir}: runner.pass_mode 仅支持 config_path/config_dict")
-
-    docs = item.get("docs") if isinstance(item.get("docs"), Mapping) else {}
-    md_path_raw = str(docs.get("md_path") or "").strip()
-    if not md_path_raw:
-        warnings.append(f"{affair_dir}: docs.md_path 为空")
-
     py_path = (affair_dir / "affair.py").resolve()
+    json_path = (affair_dir / "affair.json").resolve()
+    md_path = (affair_dir / "affair.md").resolve()
     if not py_path.exists():
         errors.append(f"{affair_dir}: 缺少 affair.py")
+    if not json_path.exists():
+        errors.append(f"{affair_dir}: 缺少 affair.json")
+    if not md_path.exists():
+        warnings.append(f"{affair_dir}: 缺少 affair.md（建议补充事务说明文档）")
+
+    runner = item.get("runner") if isinstance(item.get("runner"), Mapping) else {}
+    if runner:
+        pass_mode = str(runner.get("pass_mode") or "").strip() or "config_path"
+        if pass_mode not in PASS_MODE_SET:
+            errors.append(f"{affair_dir}: runner.pass_mode 仅支持 config_path/config_dict")
 
     return errors, warnings
 
@@ -139,6 +164,36 @@ def infer_domain(item: Mapping[str, Any], *, affair_name: str) -> str:
     return "business"
 
 
+def _looks_like_legacy_manifest(item: Mapping[str, Any]) -> bool:
+    """判断是否为旧版事务清单结构。
+
+    Args:
+        item: `affair.json` 字典。
+
+    Returns:
+        是否包含旧版元数据字段。
+    """
+
+    legacy_keys = {"name", "runner", "domain", "owner", "docs", "node", "legacy"}
+    return any(key in item for key in legacy_keys)
+
+
+def _default_runner_module(*, owner: str, folder_name: str) -> str:
+    """根据事务目录推断默认 runner 模块路径。
+
+    Args:
+        owner: 事务所有者。
+        folder_name: 事务目录名。
+
+    Returns:
+        默认模块路径字符串。
+    """
+
+    if owner == "aok":
+        return f"autodokit.affairs.{folder_name}.affair"
+    return ""
+
+
 def build_record(
     *,
     manifest: Mapping[str, Any],
@@ -166,48 +221,132 @@ def build_record(
         True
     """
 
-    name = str(manifest.get("name") or "").strip()
-    if not name:
-        raise ValueError(f"{manifest_path}: 缺少 name")
+    affair_dir = manifest_path.parent.resolve()
+    folder_name = affair_dir.name
+    is_legacy = _looks_like_legacy_manifest(manifest)
+
+    display_name = str(manifest.get("name") or "").strip() if is_legacy else folder_name
+    if not display_name:
+        display_name = folder_name
+
+    affair_uid = str(manifest.get("affair_uid") or "").strip() if is_legacy else ""
+    if not affair_uid:
+        affair_uid = display_name
+
+    aok_overrides = _load_aok_metadata_overrides() if owner == "aok" else {}
+    override_raw = aok_overrides.get(display_name)
+    override = dict(override_raw) if isinstance(override_raw, Mapping) else {}
 
     runner = manifest.get("runner") if isinstance(manifest.get("runner"), Mapping) else {}
+    if isinstance(override.get("runner"), Mapping):
+        runner = dict(override.get("runner") or {})
     module = str(runner.get("module") or "").strip()
+    if not module:
+        module = _default_runner_module(owner=owner, folder_name=folder_name)
     callable_name = str(runner.get("callable") or "").strip() or "execute"
     pass_mode = str(runner.get("pass_mode") or "").strip() or "config_path"
     if pass_mode not in PASS_MODE_SET:
         raise ValueError(f"{manifest_path}: runner.pass_mode 非法：{pass_mode}")
 
     docs = manifest.get("docs") if isinstance(manifest.get("docs"), Mapping) else {}
+    if isinstance(override.get("docs"), Mapping):
+        docs = dict(override.get("docs") or {})
     docs_md_path = str(docs.get("md_path") or "").strip()
+    if not docs_md_path:
+        docs_md_path = str((affair_dir / "affair.md").resolve())
 
-    domain = infer_domain(manifest, affair_name=name)
+    override_domain = str(override.get("domain") or "").strip().lower()
+    if override_domain in {"graph", "business"}:
+        domain = override_domain
+    else:
+        domain = infer_domain(manifest if is_legacy else {}, affair_name=display_name)
     ok, reason = validate_domain_owner(domain=domain, owner=owner)
     if not ok:
         raise ValueError(f"{manifest_path}: {reason}")
 
     raw_manifest = json.dumps(dict(manifest), ensure_ascii=False, sort_keys=True)
     manifest_hash = hashlib.sha256(raw_manifest.encode("utf-8")).hexdigest()
+    now_text = now_iso()
+
+    node_meta = manifest.get("node") if isinstance(manifest.get("node"), Mapping) else {}
+    node_template = {
+        "node_type": str(node_meta.get("node_type") or ("process" if domain == "business" else "graph")).strip(),
+        "affair_type": str(node_meta.get("affair_type") or affair_uid).strip(),
+        "config": dict(node_meta.get("config") or {}) if isinstance(node_meta.get("config"), Mapping) else {},
+        "inputs": dict(node_meta.get("inputs") or {}) if isinstance(node_meta.get("inputs"), Mapping) else {},
+        "outputs": dict(node_meta.get("outputs") or {}) if isinstance(node_meta.get("outputs"), Mapping) else {},
+        "payload_defaults": dict(node_meta.get("payload_defaults") or {})
+        if isinstance(node_meta.get("payload_defaults"), Mapping)
+        else {},
+        "flags": {
+            "allow_multi_input_ports": list(node_meta.get("allow_multi_input_ports") or [])
+            if isinstance(node_meta.get("allow_multi_input_ports"), list)
+            else [],
+            "is_leaf": bool(node_meta.get("is_leaf", True)),
+            "is_business": bool(node_meta.get("is_business", domain == "business")),
+            "is_graph": bool(node_meta.get("is_graph", domain == "graph")),
+        },
+    }
+    if isinstance(override.get("node_template"), Mapping):
+        override_node = dict(override.get("node_template") or {})
+        node_template = {
+            "node_type": str(override_node.get("node_type") or node_template.get("node_type") or "process").strip(),
+            "affair_type": str(override_node.get("affair_type") or node_template.get("affair_type") or affair_uid).strip(),
+            "config": dict(override_node.get("config") or node_template.get("config") or {}),
+            "inputs": dict(override_node.get("inputs") or node_template.get("inputs") or {}),
+            "outputs": dict(override_node.get("outputs") or node_template.get("outputs") or {}),
+            "payload_defaults": dict(override_node.get("payload_defaults") or node_template.get("payload_defaults") or {}),
+            "flags": dict(override_node.get("flags") or node_template.get("flags") or {}),
+        }
+
+    source_py_path = str((affair_dir / "affair.py").resolve())
+    params_json_path = str((affair_dir / "affair.json").resolve())
+    doc_md_path = str((affair_dir / "affair.md").resolve())
+
+    record_uid = f"{owner}:{folder_name}:{manifest_hash[:12]}"
 
     record: Dict[str, Any] = {
-        "affair_uid": name,
-        "name": name,
+        "record_uid": record_uid,
+        "affair_uid": affair_uid,
+        "display_name": display_name,
+        "folder_name": folder_name,
+        "name": display_name,
         "version": str(manifest.get("version") or "0.0.0"),
         "domain": domain,
         "owner": owner,
-        "source": str((manifest_path.parent / "affair.py").resolve()),
+        "affair_dir": str(affair_dir),
+        "source_py_path": source_py_path,
+        "params_json_path": params_json_path,
+        "doc_md_path": doc_md_path,
+        "source": source_py_path,
         "manifest_path": str(manifest_path.resolve()),
         "runner": {
             "module": module,
             "callable": callable_name,
             "pass_mode": pass_mode,
             "kwargs": dict(runner.get("kwargs") or {}) if isinstance(runner.get("kwargs"), Mapping) else {},
+            "source_py_path": source_py_path,
         },
+        "node_template": node_template,
         "docs": {
             "md_path": docs_md_path,
         },
+        "summary": str(override.get("summary") or manifest.get("summary") or "").strip(),
+        "keywords": list(override.get("keywords") or manifest.get("keywords") or [])
+        if isinstance(override.get("keywords") or manifest.get("keywords") or [], list)
+        else [],
+        "docs_index": {"md_path": docs_md_path},
+        "governance_tags": list(override.get("governance_tags") or manifest.get("governance_tags") or [])
+        if isinstance(override.get("governance_tags") or manifest.get("governance_tags") or [], list)
+        else [],
         "status": "active",
+        "enabled": bool(manifest.get("enabled", True)),
         "manifest_hash": manifest_hash,
-        "updated_at": now_iso(),
+        "created_at": now_text,
+        "updated_at": now_text,
+        "last_synced_at": now_text,
+        "source_workspace": "",
+        "collision_history": [],
         "manifest": dict(manifest),
     }
     return record
