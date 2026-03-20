@@ -1,0 +1,3328 @@
+{
+  "CAJ文件转PDF": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CAJ文件转PDF/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CAJ文件转PDF.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "process",
+      "affair_type": "CAJ文件转PDF",
+      "config": {},
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CAJ文件转PDF",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.550056+00:00"
+  },
+  "CNKI全文下载规划": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI全文下载规划/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI全文下载规划.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_download_v1",
+      "config": {
+        "detail_url": "",
+        "file_format": "pdf",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI全文下载规划",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.550912+00:00"
+  },
+  "CNKI单篇详情提取": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI单篇详情提取/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI单篇详情提取.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_paper_detail_v1",
+      "config": {
+        "detail_url": "",
+        "title_hint": "",
+        "export_id": "",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI单篇详情提取",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.551468+00:00"
+  },
+  "CNKI基础检索": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI基础检索/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI基础检索.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_search_v1",
+      "config": {
+        "query": "",
+        "page": 1,
+        "sort_by": "relevance",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI基础检索",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.551916+00:00"
+  },
+  "CNKI期刊指标提取": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI期刊指标提取/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI期刊指标提取.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_journal_index_v1",
+      "config": {
+        "journal_name": "",
+        "detail_url": "",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI期刊指标提取",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.552449+00:00"
+  },
+  "CNKI期刊检索": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI期刊检索/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI期刊检索.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_journal_search_v1",
+      "config": {
+        "journal_query": "",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI期刊检索",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.552875+00:00"
+  },
+  "CNKI期刊目录提取": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI期刊目录提取/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI期刊目录提取.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_journal_toc_v1",
+      "config": {
+        "journal_name": "",
+        "year": "",
+        "issue": "",
+        "download_original": false,
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI期刊目录提取",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.553331+00:00"
+  },
+  "CNKI桥接": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI桥接/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI桥接.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_bridge_v1",
+      "config": {
+        "mode": "cnki-search",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI桥接",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.553843+00:00"
+  },
+  "CNKI结果解析": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI结果解析/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI结果解析.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_parse_results_v1",
+      "config": {
+        "page_url": "",
+        "current_page": 1,
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI结果解析",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.554313+00:00"
+  },
+  "CNKI翻页导航": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI翻页导航/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI翻页导航.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_navigate_pages_v1",
+      "config": {
+        "action": "next",
+        "current_page": 1,
+        "target_page": null,
+        "sort_by": "relevance",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI翻页导航",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.554741+00:00"
+  },
+  "CNKI题录导出": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI题录导出/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI题录导出.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_export_v1",
+      "config": {
+        "detail_url": "",
+        "export_mode": "ris",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI题录导出",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.555201+00:00"
+  },
+  "CNKI高级检索": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/CNKI高级检索/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.CNKI高级检索.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cnki_advanced_search_v1",
+      "config": {
+        "query": "",
+        "author": "",
+        "journal": "",
+        "start_year": "",
+        "end_year": "",
+        "source_types": [],
+        "field_type": "SU",
+        "access_type": "closed",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 CNKI高级检索",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.555658+00:00"
+  },
+  "DiD_RDD分析": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/DiD_RDD分析/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.DiD_RDD分析.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "did_rdd_pipeline_v1",
+      "config": {
+        "panel_rows": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 DiD_RDD分析",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.556096+00:00"
+  },
+  "LaTeX转Word": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/LaTeX转Word/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.LaTeX转Word.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "LaTeX转Word",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 LaTeX转Word",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.556569+00:00"
+  },
+  "node_runtime_retry_probe": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/node_runtime_retry_probe/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.node_runtime_retry_probe.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "node_runtime_retry_probe",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 node_runtime_retry_probe",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.557044+00:00"
+  },
+  "Obsidian关联导出": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/Obsidian关联导出/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.Obsidian关联导出.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "sink",
+      "affair_type": "Obsidian关联导出",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 Obsidian关联导出",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.557529+00:00"
+  },
+  "PDF文件转md文件": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/PDF文件转md文件/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.PDF文件转md文件.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "source",
+      "affair_type": "pdf_to_md_v1",
+      "config": {
+        "input_pdf_dir": "data/文献原文数据",
+        "output_md_dir": "data/文献原文转md数据",
+        "converter": "babeldoc",
+        "babeldoc": {
+          "enabled": false,
+          "note": "这里放 BabelDOC 需要的参数（占位/透传）"
+        },
+        "overwrite": false,
+        "output_log": "workflows/workflow_PDF文件转md文件/data/pdf_to_md_manifest.log"
+      },
+      "inputs": {},
+      "outputs": {
+        "md_dir": {
+          "name": "md_dir",
+          "data_type": "dir"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 PDF文件转md文件",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.558009+00:00"
+  },
+  "PDF文件转结构化数据文件": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/PDF文件转结构化数据文件/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.PDF文件转结构化数据文件.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "PDF文件转结构化数据文件",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 PDF文件转结构化数据文件",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.558534+00:00"
+  },
+  "task_docs_aggregate": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/task_docs_aggregate/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.task_docs_aggregate.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "merge",
+      "affair_type": "task_docs_aggregate",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 task_docs_aggregate",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.558969+00:00"
+  },
+  "task_docs_archive": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/task_docs_archive/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.task_docs_archive.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "sink",
+      "affair_type": "task_docs_archive",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 task_docs_archive",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.559447+00:00"
+  },
+  "task_docs_create_latest": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/task_docs_create_latest/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.task_docs_create_latest.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "source",
+      "affair_type": "task_docs_create_latest",
+      "config": {},
+      "inputs": {},
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 task_docs_create_latest",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.559897+00:00"
+  },
+  "task_docs_finalize_latest": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/task_docs_finalize_latest/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.task_docs_finalize_latest.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "sink",
+      "affair_type": "task_docs_finalize_latest",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 task_docs_finalize_latest",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.560343+00:00"
+  },
+  "Word转LaTeX": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/Word转LaTeX/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.Word转LaTeX.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "Word转LaTeX",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 Word转LaTeX",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.560768+00:00"
+  },
+  "中文本地资源管理": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/中文本地资源管理/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.中文本地资源管理.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cn_local_library_manager_v1",
+      "config": {
+        "root_dir": "",
+        "bib_dir_name": "bib",
+        "attachments_dir_name": "attachments",
+        "raw_data_dir_name": "raw_data",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 中文本地资源管理",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.561197+00:00"
+  },
+  "中文网页采集": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/中文网页采集/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.中文网页采集.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cn_web_acquisition_v1",
+      "config": {
+        "query": "",
+        "seed_urls": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 中文网页采集",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.561787+00:00"
+  },
+  "从PDF提取可检索文本": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/从PDF提取可检索文本/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.从PDF提取可检索文本.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "pdf_to_docs_v1",
+      "config": {
+        "input_table_csv": "workflows/workflow_导入和预处理文献元数据/data/题录导出文件/文献数据表.csv",
+        "only_candidates_csv": null,
+        "pdf_path_field": "pdf_path",
+        "output_dir": "workflows/workflow_从PDF提取可检索文本/output/02_pdf_to_docs",
+        "max_pages": 50,
+        "limit": 30
+      },
+      "inputs": {
+        "table": {
+          "name": "table",
+          "data_type": "csv"
+        },
+        "candidates": {
+          "name": "candidates",
+          "data_type": "csv"
+        }
+      },
+      "outputs": {
+        "docs": {
+          "name": "docs",
+          "data_type": "jsonl"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 从PDF提取可检索文本",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.562316+00:00"
+  },
+  "任务数据库初始化": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/任务数据库初始化/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.任务数据库初始化.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "taskdb_bootstrap_v1",
+      "config": {
+        "project_root": ".",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 任务数据库初始化",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.562907+00:00"
+  },
+  "任务数据库回放": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/任务数据库回放/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.任务数据库回放.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "taskdb_replay_v1",
+      "config": {
+        "project_root": ".",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 任务数据库回放",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.563452+00:00"
+  },
+  "任务数据库校验": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/任务数据库校验/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.任务数据库校验.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "taskdb_validate_v1",
+      "config": {
+        "project_root": ".",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 任务数据库校验",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.563961+00:00"
+  },
+  "公开数据获取": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/公开数据获取/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.公开数据获取.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "api_data_fetch_v1",
+      "config": {
+        "query": "",
+        "object_type": "dataset",
+        "source_type": "online",
+        "region_type": "global",
+        "access_type": "open",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 公开数据获取",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.564467+00:00"
+  },
+  "单篇精读": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/单篇精读/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.单篇精读.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "sink",
+      "affair_type": "single_paper_reading_v1",
+      "config": {
+        "input_docs_jsonl": "workflows/workflow_从PDF提取可检索文本/output/02_pdf_to_docs/docs.jsonl",
+        "output_dir": "workflows/workflow_单篇精读/output/05_single_reading",
+        "uid": 1,
+        "doc_id": null,
+        "model": "qwen-plus",
+        "system_prompt": "你是一名严谨的学术研究助理。请用中文输出，结构清晰。",
+        "max_chars": 12000
+      },
+      "inputs": {
+        "docs": {
+          "name": "docs",
+          "data_type": "jsonl"
+        }
+      },
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": true,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 单篇精读",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.564989+00:00"
+  },
+  "单轮调度派发": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/单轮调度派发/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.单轮调度派发.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "scheduler_dispatch_v1",
+      "config": {
+        "task_uid": "",
+        "goal": "",
+        "payload": {},
+        "project_root": ".",
+        "current_transaction_uid": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 单轮调度派发",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.565517+00:00"
+  },
+  "变量操作化": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/变量操作化/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.变量操作化.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "variable_operationalization_v1",
+      "config": {
+        "concepts": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 变量操作化",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.566009+00:00"
+  },
+  "合并去重bibtex": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/合并去重bibtex/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.合并去重bibtex.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "合并去重bibtex",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 合并去重bibtex",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.566497+00:00"
+  },
+  "合并去重文献元数据": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/合并去重文献元数据/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.合并去重文献元数据.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "合并去重文献元数据",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 合并去重文献元数据",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.566925+00:00"
+  },
+  "向量化与索引构建": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/向量化与索引构建/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.向量化与索引构建.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "vectorize_and_build_index_v1",
+      "config": {
+        "input_chunks_jsonl": "workflows/workflow_解析与分块/output/03_chunk/chunks.jsonl",
+        "output_dir": "workflows/workflow_向量化与索引构建/output/04_vector_index",
+        "vectorizer_type": "tfidf",
+        "max_features": 20000,
+        "ngram_range": [
+          1,
+          2
+        ]
+      },
+      "inputs": {
+        "chunks": {
+          "name": "chunks",
+          "data_type": "jsonl"
+        }
+      },
+      "outputs": {
+        "index": {
+          "name": "index",
+          "data_type": "dir"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 向量化与索引构建",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.567419+00:00"
+  },
+  "图节点_calc": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_calc/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_calc.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "calc",
+      "affair_type": "graph_node_calc_v1",
+      "config": {
+        "expression": "",
+        "expression_mode": "safe",
+        "allow_unsafe_eval": false,
+        "variables": {}
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "result": {
+          "name": "result",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_calc",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.567845+00:00"
+  },
+  "图节点_compare": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_compare/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_compare.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "compare",
+      "affair_type": "graph_node_compare_v1",
+      "config": {
+        "left": null,
+        "operator": "!=",
+        "right": null
+      },
+      "inputs": {
+        "left": {
+          "name": "left",
+          "data_type": "any"
+        },
+        "right": {
+          "name": "right",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "true": {
+          "name": "true",
+          "data_type": "any"
+        },
+        "false": {
+          "name": "false",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_compare",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.568399+00:00"
+  },
+  "图节点_container": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_container/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_container.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "container",
+      "affair_type": "graph_node_container_v1",
+      "config": {
+        "container_name": "container",
+        "expression_mode": "safe",
+        "allow_unsafe_eval": false,
+        "variables": {},
+        "loop": {
+          "enabled": false,
+          "max_iterations": 1,
+          "stop_condition": ""
+        }
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_container",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.568878+00:00"
+  },
+  "图节点_end": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_end/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_end.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "end",
+      "affair_type": "graph_node_end_v1",
+      "config": {
+        "node_role": "end"
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": true,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_end",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.569444+00:00"
+  },
+  "图节点_fork": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_fork/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_fork.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "fork",
+      "affair_type": "graph_node_fork_v1",
+      "config": {
+        "branches": [
+          "branch_1",
+          "branch_2"
+        ]
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "branch_1": {
+          "name": "branch_1",
+          "data_type": "any"
+        },
+        "branch_2": {
+          "name": "branch_2",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_fork",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.570001+00:00"
+  },
+  "图节点_if": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_if/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_if.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "if",
+      "affair_type": "graph_node_if_v1",
+      "config": {
+        "condition": false,
+        "default": false
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "true": {
+          "name": "true",
+          "data_type": "any"
+        },
+        "false": {
+          "name": "false",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_if",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.570506+00:00"
+  },
+  "图节点_input": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_input/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_input.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "input",
+      "affair_type": "graph_node_input_v1",
+      "config": {
+        "input_name": "input",
+        "input_source": ""
+      },
+      "inputs": {},
+      "outputs": {
+        "data": {
+          "name": "data",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_input",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.570966+00:00"
+  },
+  "图节点_merge": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_merge/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_merge.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "merge",
+      "affair_type": "graph_node_merge_v1",
+      "config": {
+        "merge_strategy": "wait_all_activated",
+        "quorum": 1,
+        "max_wait_retries": null,
+        "on_timeout": "fail"
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [
+          "in"
+        ],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_merge",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.571455+00:00"
+  },
+  "图节点_output": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_output/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_output.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "output",
+      "affair_type": "graph_node_output_v1",
+      "config": {
+        "output_name": "output",
+        "output_target": ""
+      },
+      "inputs": {
+        "data": {
+          "name": "data",
+          "data_type": "any"
+        }
+      },
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": true,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_output",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.571951+00:00"
+  },
+  "图节点_start": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_start/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_start.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "start",
+      "affair_type": "graph_node_start_v1",
+      "config": {
+        "node_role": "start"
+      },
+      "inputs": {},
+      "outputs": {
+        "next": {
+          "name": "next",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_start",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.572448+00:00"
+  },
+  "图节点_switch": {
+    "domain": "graph",
+    "docs": {
+      "md_path": "autodokit/affairs/图节点_switch/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.图节点_switch.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "switch",
+      "affair_type": "graph_node_switch_v1",
+      "config": {
+        "switch_value": "A",
+        "route_expression": "",
+        "expression_mode": "safe",
+        "allow_unsafe_eval": false,
+        "variables": {},
+        "cases": {
+          "case_a": [
+            "A"
+          ],
+          "case_b": [
+            "B"
+          ]
+        },
+        "default_label": "default"
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "case_a": {
+          "name": "case_a",
+          "data_type": "any"
+        },
+        "case_b": {
+          "name": "case_b",
+          "data_type": "any"
+        },
+        "default": {
+          "name": "default",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": false,
+        "is_graph": true
+      }
+    },
+    "summary": "事务 图节点_switch",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.572934+00:00"
+  },
+  "外审意见接收": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/外审意见接收/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.外审意见接收.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "decision",
+      "affair_type": "external_review_intake_v1",
+      "config": {
+        "decision": "",
+        "review_comments": [],
+        "editor_notes": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 外审意见接收",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.573540+00:00"
+  },
+  "实证四件套": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/实证四件套/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.实证四件套.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "empirical_four_pack_v1",
+      "config": {
+        "baseline_summary": "",
+        "mechanism_points": [],
+        "robustness_checks": [],
+        "heterogeneity_groups": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 实证四件套",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.574869+00:00"
+  },
+  "审稿回复": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/审稿回复/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.审稿回复.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "revision_response_v1",
+      "config": {
+        "comments": [],
+        "manuscript_title": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 审稿回复",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.575443+00:00"
+  },
+  "审稿意见拆解": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/审稿意见拆解/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.审稿意见拆解.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "review_response_v1",
+      "config": {
+        "comments": [],
+        "manuscript_title": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 审稿意见拆解",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.575946+00:00"
+  },
+  "导入和预处理文献元数据": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/导入和预处理文献元数据/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.导入和预处理文献元数据.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "source",
+      "affair_type": "import_and_preprocess_bibliography_v1",
+      "config": {
+        "bibtex_path": "data/题录元数据",
+        "output_dir": "workflows/workflow_导入和预处理文献元数据/data/题录导出文件",
+        "pdf_dir": "data/文献原文数据",
+        "tag_list": [
+          "graph",
+          "risk",
+          "bank",
+          "systemic"
+        ],
+        "tag_match_fields": [
+          "title",
+          "abstract",
+          "keywords"
+        ],
+        "has_pdf_enable": true,
+        "pdf_match_mode": "title"
+      },
+      "inputs": {},
+      "outputs": {
+        "table": {
+          "name": "table",
+          "data_type": "csv"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 导入和预处理文献元数据",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.576478+00:00"
+  },
+  "工作区自检": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/工作区自检/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.工作区自检.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "workspace_sanity_check_v1",
+      "config": {
+        "project_root": "",
+        "mode": "full",
+        "auto_migrate": false,
+        "write_report": true,
+        "report_dir": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 工作区自检",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.576964+00:00"
+  },
+  "工作流执行": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/工作流执行/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.工作流执行.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "ark_workflow_executor_v1",
+      "config": {
+        "workflow_path": "",
+        "dry_run": false,
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 工作流执行",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.577489+00:00"
+  },
+  "引文核验": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/引文核验/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.引文核验.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "citation_verification_v1",
+      "config": {
+        "citations": [],
+        "references": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 引文核验",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.577941+00:00"
+  },
+  "成果归档发布": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/成果归档发布/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.成果归档发布.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "output",
+      "affair_type": "publication_archive_release_v1",
+      "config": {
+        "manuscript_title": "",
+        "publication_status": "",
+        "archive_files": [],
+        "release_note": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 成果归档发布",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.578390+00:00"
+  },
+  "数据工程样本构建": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/数据工程样本构建/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.数据工程样本构建.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "data_engineering_sample_construction_v1",
+      "config": {
+        "dataset_sources": [],
+        "join_keys": [],
+        "variable_specs": [],
+        "output_table": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 数据工程样本构建",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.578836+00:00"
+  },
+  "文献矩阵": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/文献矩阵/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.文献矩阵.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "source",
+      "affair_type": "literature_matrix_v1",
+      "config": {
+        "input_docs_jsonl": "output/docs/docs.jsonl",
+        "output_dir": "output/matrix",
+        "limit": 20,
+        "uids": null,
+        "model": "qwen-plus",
+        "max_chars": 8000
+      },
+      "inputs": {},
+      "outputs": {
+        "result": {
+          "name": "result",
+          "data_type": "jsonl"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 文献矩阵",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.579666+00:00"
+  },
+  "文献阅读规划": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/文献阅读规划/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.文献阅读规划.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "literature_reading_plan_v1",
+      "config": {
+        "focus": "",
+        "candidates": [],
+        "max_items": 12,
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 文献阅读规划",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.580349+00:00"
+  },
+  "方法白名单选择": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/方法白名单选择/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.方法白名单选择.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "method_whitelist_selection_v1",
+      "config": {
+        "candidate_methods": [],
+        "whitelist": [],
+        "top_k": 3,
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 方法白名单选择",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.580894+00:00"
+  },
+  "期刊投稿": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/期刊投稿/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.期刊投稿.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "journal_submission_v1",
+      "config": {
+        "manuscript_title": "",
+        "target_journal": "",
+        "package_files": [],
+        "version_tag": "v1"
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 期刊投稿",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.581504+00:00"
+  },
+  "本地文献导入": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/本地文献导入/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.本地文献导入.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "local_reference_ingestion_v1",
+      "config": {
+        "project_root": "",
+        "source_paths": [],
+        "persist": false,
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 本地文献导入",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.582233+00:00"
+  },
+  "检索治理": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/检索治理/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.检索治理.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "retrieval_governance_v1",
+      "config": {
+        "request_uid": "",
+        "query": "",
+        "object_type": "literature",
+        "source_type": "online",
+        "region_type": "global",
+        "access_type": "open",
+        "metadata": {},
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 检索治理",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.582786+00:00"
+  },
+  "模型路由派发": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/模型路由派发/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.模型路由派发.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "model_routing_dispatch_v1",
+      "config": {
+        "task_type": "general",
+        "quality_tier": "standard",
+        "budget_level": "medium",
+        "latency_level": "medium",
+        "risk_level": "medium",
+        "mainland_only": true,
+        "workspace_root": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 模型路由派发",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.583381+00:00"
+  },
+  "清洗bibtex文件": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/清洗bibtex文件/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.清洗bibtex文件.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "清洗bibtex文件",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 清洗bibtex文件",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.583985+00:00"
+  },
+  "生成关键词集合": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/生成关键词集合/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.生成关键词集合.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "source",
+      "affair_type": "keyword_set_generation_v1",
+      "config": {
+        "description": "研究主题：房地产市场与银行系统性风险的交叉研究，关注房价波动、抵押品渠道、银行风险传导与宏观审慎监管。",
+        "research_domains": {
+          "房地产": [
+            "房地产",
+            "房价",
+            "住房市场",
+            "房地产价格波动",
+            "抵押品",
+            "房地产周期"
+          ],
+          "银行系统性风险": [
+            "银行系统性风险",
+            "系统性风险",
+            "风险溢出",
+            "CoVaR",
+            "宏观审慎",
+            "银行风险传导"
+          ],
+          "DSGE模型": [
+            "DSGE"
+          ]
+        },
+        "reference_materials_dir": "workflows/workflow_生成关键词集合/data/00_reference_materials",
+        "reference_materials_max_files": 20,
+        "reference_materials_max_chars": 20000,
+        "output_dir": "workflows/workflow_生成关键词集合/data/01_keyword_set",
+        "output_json_name": "keyword_set.json",
+        "output_txt_name": "keyword_set.txt",
+        "output_pairs_name": "keyword_pairs.txt",
+        "output_debug_name": "keyword_debug.json",
+        "output_domains_name": "keyword_domains.json",
+        "model": "qwen-plus",
+        "temperature": 0.2,
+        "max_keywords": 80,
+        "include_chinese": true,
+        "include_english": true,
+        "include_phrases": true,
+        "max_domain_keywords": 40,
+        "max_pairs": 2000,
+        "dry_run": false
+      },
+      "inputs": {},
+      "outputs": {
+        "keywords": {
+          "name": "keywords",
+          "data_type": "dir"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 生成关键词集合",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.584554+00:00"
+  },
+  "生成文献元数据关系图": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/生成文献元数据关系图/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.生成文献元数据关系图.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "生成文献元数据关系图",
+      "config": {},
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "any"
+        }
+      },
+      "outputs": {
+        "out": {
+          "name": "out",
+          "data_type": "any"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 生成文献元数据关系图",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.585131+00:00"
+  },
+  "白名单治理检查": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/白名单治理检查/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.白名单治理检查.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "whitelist_governance_check_v1",
+      "config": {
+        "requested_scopes": [],
+        "approved_scopes": [],
+        "operator": "",
+        "change_reason": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 白名单治理检查",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.585732+00:00"
+  },
+  "百炼SDK接入检查": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/百炼SDK接入检查/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.百炼SDK接入检查.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "aliyun_bailian_sdk_bootstrap_v1",
+      "config": {
+        "key_file": "",
+        "model": "qwen-plus",
+        "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "workspace_root": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 百炼SDK接入检查",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.586182+00:00"
+  },
+  "知识预筛选": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/知识预筛选/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.知识预筛选.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "knowledge_prescreen_v1",
+      "config": {
+        "focus": "",
+        "items": [],
+        "literature_items_path": "",
+        "include_terms": [],
+        "exclude_terms": [],
+        "min_score": 1.0,
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 知识预筛选",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.586680+00:00"
+  },
+  "研究构思": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/研究构思/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.研究构思.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "research_ideation_v1",
+      "config": {
+        "topic": "",
+        "literature_gaps": [],
+        "variable_ideas": [],
+        "target_journal": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 研究构思",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.587183+00:00"
+  },
+  "研究诚信检查": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/研究诚信检查/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.研究诚信检查.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "integrity_check_v1",
+      "config": {
+        "project_root": "",
+        "strict": false,
+        "include_extensions": [
+          ".py",
+          ".md",
+          ".json",
+          ".yaml",
+          ".yml",
+          ".toml",
+          ".txt"
+        ],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 研究诚信检查",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.587681+00:00"
+  },
+  "管理文档单元数据库": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/管理文档单元数据库/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.管理文档单元数据库.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "manage_unit_db_v1",
+      "config": {
+        "input_documents_dir": "data/文献原文数据",
+        "unit_db_dir": "data/文档单元数据库",
+        "output_dir": "workflows/workflow_管理文档单元数据库/data/01_unit_db"
+      },
+      "inputs": {
+        "documents": {
+          "name": "documents",
+          "data_type": "dir"
+        }
+      },
+      "outputs": {
+        "unit_db": {
+          "name": "unit_db",
+          "data_type": "dir"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 管理文档单元数据库",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.588116+00:00"
+  },
+  "结果分析解读": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/结果分析解读/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.结果分析解读.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "results_analysis_v1",
+      "config": {
+        "statistical_summary": "",
+        "mechanism_points": [],
+        "significance_notes": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 结果分析解读",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.588691+00:00"
+  },
+  "综述草稿生成": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/综述草稿生成/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.综述草稿生成.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "sink",
+      "affair_type": "review_draft_v1",
+      "config": {
+        "input_matrix_jsonl": "output/matrix/matrix.jsonl",
+        "input_docs_jsonl": null,
+        "output_dir": "output/review",
+        "title": "综述草稿",
+        "outline": null,
+        "model": "qwen-plus",
+        "max_items": 30
+      },
+      "inputs": {
+        "in": {
+          "name": "in",
+          "data_type": "jsonl"
+        }
+      },
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": true,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 综述草稿生成",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.589462+00:00"
+  },
+  "自动化导入知网研学专题": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/自动化导入知网研学专题/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.自动化导入知网研学专题.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "process",
+      "affair_type": "自动化导入知网研学专题",
+      "config": {},
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 自动化导入知网研学专题",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.589981+00:00"
+  },
+  "解析与分块": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/解析与分块/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.解析与分块.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "parse_and_chunk_v1",
+      "config": {
+        "input_docs_jsonl": "workflows/workflow_从PDF提取可检索文本/output/02_pdf_to_docs/docs.jsonl",
+        "output_dir": "workflows/workflow_解析与分块/output/03_chunk",
+        "chunk_size": 1500,
+        "chunk_overlap": 200,
+        "min_chunk_size": 200
+      },
+      "inputs": {
+        "docs": {
+          "name": "docs",
+          "data_type": "jsonl"
+        }
+      },
+      "outputs": {
+        "chunks": {
+          "name": "chunks",
+          "data_type": "jsonl"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 解析与分块",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.590452+00:00"
+  },
+  "计量环境配置": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/计量环境配置/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.计量环境配置.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "econometrics_runtime_setup_v1",
+      "config": {
+        "project_root": "",
+        "require_r": true,
+        "require_stata": false,
+        "python_baseline": "3.13",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 计量环境配置",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.590977+00:00"
+  },
+  "订阅文献访问治理": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/订阅文献访问治理/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.订阅文献访问治理.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "cn_subscribed_literature_access_v1",
+      "config": {
+        "target_records": [],
+        "access_scope": "campus",
+        "auth_mode": "manual",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 订阅文献访问治理",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.591448+00:00"
+  },
+  "论文整编写作": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/论文整编写作/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.论文整编写作.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "ml_paper_writing_v1",
+      "config": {
+        "section_materials": {},
+        "evidence_points": [],
+        "journal_style": "general",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 论文整编写作",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.591929+00:00"
+  },
+  "论文自审": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/论文自审/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.论文自审.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "paper_self_review_v1",
+      "config": {
+        "manuscript_title": "",
+        "sections": {},
+        "figures": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 论文自审",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.592382+00:00"
+  },
+  "论文草稿": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/论文草稿/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.论文草稿.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "paper_draft_v1",
+      "config": {
+        "topic": "",
+        "contributions": [],
+        "limitations": [],
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 论文草稿",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.592880+00:00"
+  },
+  "证据综合": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/证据综合/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.证据综合.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "rag_evidence_synthesis_v1",
+      "config": {
+        "question": "",
+        "passages": [],
+        "top_k": 3,
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 证据综合",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.593336+00:00"
+  },
+  "语义预筛选": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/语义预筛选/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.语义预筛选.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "semantic_prescreen_v1",
+      "config": {
+        "input_table_csv": "workflows/workflow_导入和预处理文献元数据/data/题录导出文件/文献数据表.csv",
+        "input_keywords": "workflows/workflow_生成关键词集合/data/01_keyword_set",
+        "output_dir": "workflows/workflow_语义预筛选/data/01_prescreen",
+        "include_if_has_pdf": true,
+        "include_domains": [
+          "房地产",
+          "银行系统性风险"
+        ],
+        "exclude_domains": [
+          "DSGE模型"
+        ],
+        "year_range": null,
+        "top_k": 80,
+        "semantic_enable": false,
+        "semantic_queries": []
+      },
+      "inputs": {
+        "table": {
+          "name": "table",
+          "data_type": "csv"
+        },
+        "keywords": {
+          "name": "keywords",
+          "data_type": "dir"
+        }
+      },
+      "outputs": {
+        "prescreen": {
+          "name": "prescreen",
+          "data_type": "dir"
+        }
+      },
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 语义预筛选",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.593807+00:00"
+  },
+  "项目初始化": {
+    "domain": "business",
+    "docs": {
+      "md_path": "autodokit/affairs/项目初始化/affair.md"
+    },
+    "runner": {
+      "module": "autodokit.affairs.项目初始化.affair",
+      "callable": "execute",
+      "pass_mode": "config_path",
+      "kwargs": {}
+    },
+    "node_template": {
+      "node_type": "transform",
+      "affair_type": "project_initialization_v1",
+      "config": {
+        "project_root": "",
+        "output_dir": ""
+      },
+      "inputs": {},
+      "outputs": {},
+      "payload_defaults": {},
+      "flags": {
+        "allow_multi_input_ports": [],
+        "is_leaf": false,
+        "is_business": true,
+        "is_graph": false
+      }
+    },
+    "summary": "事务 项目初始化",
+    "keywords": [],
+    "governance_tags": [],
+    "migrated_at": "2026-03-19T01:30:42.594274+00:00"
+  }
+}
