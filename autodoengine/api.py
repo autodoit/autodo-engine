@@ -400,6 +400,107 @@ def get_tool(tool_name: str) -> Any:
     return getattr(tools_module, key)
 
 
+def list_public_tools(exposure: str | None = None, kind: str | None = None) -> List[Dict[str, Any]]:
+    """列出 AOK 公开工具（函数名模式）。
+
+    Args:
+        exposure: 兼容旧参数。`public-read/public-safe` 映射到 user，`internal` 映射到 developer。
+        kind: 兼容旧参数，当前未使用。
+
+    Returns:
+        list[dict[str, Any]]: 工具条目列表。
+
+    Raises:
+        KeyError: 当 `autodokit.tools` 未提供工具清单接口时抛出。
+    """
+
+    _ = kind
+    tools_module = _load_autodokit_tools_module()
+    list_user = getattr(tools_module, "list_user_tools", None)
+    list_developer = getattr(tools_module, "list_developer_tools", None)
+    if list_user is None or list_developer is None:
+        raise KeyError("autodokit.tools 未提供 list_user_tools/list_developer_tools 接口")
+
+    if exposure == "internal":
+        scope = "developer"
+    elif exposure in {"public-read", "public-safe"}:
+        scope = "user"
+    else:
+        scope = "all"
+
+    rows: list[dict[str, Any]] = []
+    if scope in {"user", "all"}:
+        for name in list_user():
+            rows.append({"tool_name": str(name), "scope": "user"})
+    if scope in {"developer", "all"}:
+        for name in list_developer():
+            rows.append({"tool_name": str(name), "scope": "developer"})
+    return rows
+
+
+def invoke_public_tool(
+    capability_id: str,
+    *,
+    payload: Any | None = None,
+    caller_context: Dict[str, Any] | None = None,
+    allow_internal: bool = False,
+) -> Dict[str, Any]:
+    """调用 AOK 公开工具（兼容旧接口名）。
+
+    Args:
+        capability_id: 工具函数名（兼容旧字段名）。
+        payload: 调用参数；支持 `{"args": [...], "kwargs": {...}}`，也兼容直接字典 kwargs。
+        caller_context: 调用方上下文，当前仅用于记录来源。
+        allow_internal: 兼容旧参数；当前通过 scope 控制是否允许开发者工具。
+
+    Returns:
+        dict[str, Any]: 调用结果。
+
+    Raises:
+        KeyError: 当 `autodokit.tools` 未提供工具调用接口时抛出。
+    """
+
+    target = str(capability_id or "").strip()
+    if not target:
+        raise ValueError("capability_id 不能为空")
+
+    tools_module = _load_autodokit_tools_module()
+    get_tool = getattr(tools_module, "get_tool", None)
+    if get_tool is None:
+        raise KeyError("autodokit.tools 未提供 get_tool 接口")
+
+    context = dict(caller_context or {})
+    context.setdefault("caller_source", "autodoengine.api")
+    scope = "all" if allow_internal else "user"
+
+    call_args: list[Any]
+    call_kwargs: dict[str, Any]
+    if payload is None:
+        call_args = []
+        call_kwargs = {}
+    elif isinstance(payload, dict):
+        raw_args = payload.get("args", None)
+        raw_kwargs = payload.get("kwargs", None)
+        if raw_args is None and raw_kwargs is None:
+            call_args = []
+            call_kwargs = dict(payload)
+        else:
+            call_args = list(raw_args or [])
+            call_kwargs = dict(raw_kwargs or {})
+    else:
+        call_args = [payload]
+        call_kwargs = {}
+
+    tool_fn = get_tool(target, scope=scope)
+    result = tool_fn(*call_args, **call_kwargs)
+    return {
+        "status": "success",
+        "tool_name": target,
+        "caller": context,
+        "data": result,
+    }
+
+
 def prepare_affair_config(*, config: Dict[str, Any], workspace_root: str | Path) -> Dict[str, Any]:
     """预处理事务配置路径。
 
