@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "affair_uid": { "type": "string" },
+    "config": { "type": "object", "additionalProperties": true },
+    "config_path": { "type": "string" },
+    "workspace_root": { "type": "string" },
+    "strict": { "type": "boolean" },
+    "runner_kwargs": { "type": "object", "additionalProperties": true }
+  },
+  "required": ["affair_uid"],
+  "additionalProperties": false
+}

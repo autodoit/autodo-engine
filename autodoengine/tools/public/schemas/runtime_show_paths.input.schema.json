@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "base_dir": { "type": "string" }
+  },
+  "required": [],
+  "additionalProperties": false
+}

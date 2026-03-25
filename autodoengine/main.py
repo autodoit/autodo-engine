@@ -9,6 +9,7 @@ from pathlib import Path
 
 from autodoengine import api
 from autodoengine.taskdb import decision_store, log_store, task_store
+from autodoengine.tools.adapters.cli import handle_cli_command, register_cli_subcommands
 
 
 def _to_jsonable(value: object) -> object:
@@ -72,6 +73,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_show_affair_paths = sub.add_parser("show-affair-registry-paths", help="查看事务管理系统路径")
     p_show_affair_paths.add_argument("--workspace-root", default=None, help="用户工作区根目录")
 
+    register_cli_subcommands(sub)
+
     return parser
 
 
@@ -80,6 +83,9 @@ def run_cli(argv: list[str] | None = None) -> int:
 
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if handle_cli_command(args):
+        return 0
 
     if args.command == "init-runtime":
         api.bootstrap_runtime(args.base_dir)

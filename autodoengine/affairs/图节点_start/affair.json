@@ -1,0 +1,35 @@
+{
+  "name": "图节点_start",
+  "domain": "graph",
+  "owner": "aok",
+  "version": "0.1.0",
+  "summary": "autodo-engine 内置最小 start 图节点事务",
+  "runner": {
+    "module": "autodoengine.affairs.图节点_start.affair",
+    "callable": "execute",
+    "pass_mode": "config_path",
+    "kwargs": {}
+  },
+  "docs": {
+    "md_path": "autodoengine/affairs/图节点_start/affair.md"
+  },
+  "node": {
+    "node_type": "start",
+    "affair_type": "图节点_start",
+    "content_kind": "affair",
+    "allow_multi_input_ports": [],
+    "inputs": {},
+    "outputs": {
+      "result": "dict"
+    },
+    "payload_defaults": {
+      "output_dir": "output/demo"
+    },
+    "config": {
+      "output_dir": "output/demo"
+    },
+    "is_leaf": true,
+    "is_business": false,
+    "is_graph": true
+  }
+}

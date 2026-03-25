@@ -31,22 +31,52 @@ from autodoengine.utils.common.affair_sync import SCHEMA_VERSION, build_runtime_
 from autodoengine.utils.path_tools import load_json_or_py, resolve_paths_to_absolute
 
 
-def _load_autodokit_tools_module() -> Any:
-    """按需加载 autodo-kit 工具模块。
+def _load_tools_module() -> Any:
+    """按需加载工具模块。
 
     Returns:
-        `autodokit.tools` 模块对象。
+        优先返回 `autodokit.tools`，未安装时回退到 `autodoengine.tools`。
 
     Raises:
-        ModuleNotFoundError: 当未安装 autodo-kit 时抛出更明确的错误。
+        ModuleNotFoundError: 当外部与内置工具模块均不可用时抛出。
     """
 
     try:
         return importlib.import_module("autodokit.tools")
-    except ModuleNotFoundError as exc:
-        raise ModuleNotFoundError(
-            "未找到 autodokit.tools。请先安装 autodo-kit，再使用工具查询或事务直调接口。"
-        ) from exc
+    except ModuleNotFoundError:
+        try:
+            return importlib.import_module("autodoengine.tools")
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "未找到可用工具模块（autodokit.tools/autodoengine.tools）。"
+            ) from exc
+
+
+def _load_tools_module_with_attrs(*required_attrs: str) -> Any:
+    """加载满足指定接口的工具模块。
+
+    Args:
+        *required_attrs: 必须存在的属性名。
+
+    Returns:
+        满足接口要求的工具模块。
+
+    Raises:
+        KeyError: 当没有模块满足要求时抛出。
+    """
+
+    candidates: list[Any] = []
+    for module_name in ("autodokit.tools", "autodoengine.tools"):
+        try:
+            candidates.append(importlib.import_module(module_name))
+        except ModuleNotFoundError:
+            continue
+
+    for module in candidates:
+        if all(hasattr(module, attr) for attr in required_attrs):
+            return module
+
+    raise KeyError(f"工具模块未提供所需接口：{', '.join(required_attrs)}")
 
 
 def _normalize_workspace_root(workspace_root: str | Path | None) -> Path:
@@ -370,7 +400,7 @@ def list_tools() -> List[str]:
         已导出的工具函数名列表。
     """
 
-    tools_module = _load_autodokit_tools_module()
+    tools_module = _load_tools_module()
     exported = getattr(tools_module, "__all__", [])
     if isinstance(exported, list):
         return [str(item) for item in exported]
@@ -394,7 +424,7 @@ def get_tool(tool_name: str) -> Any:
     if not key:
         raise KeyError("tool_name 不能为空")
 
-    tools_module = _load_autodokit_tools_module()
+    tools_module = _load_tools_module()
     if not hasattr(tools_module, key):
         raise KeyError(f"工具不存在：{key}")
     return getattr(tools_module, key)
@@ -411,15 +441,15 @@ def list_public_tools(exposure: str | None = None, kind: str | None = None) -> L
         list[dict[str, Any]]: 工具条目列表。
 
     Raises:
-        KeyError: 当 `autodokit.tools` 未提供工具清单接口时抛出。
+        KeyError: 当工具模块未提供工具清单接口时抛出。
     """
 
     _ = kind
-    tools_module = _load_autodokit_tools_module()
+    tools_module = _load_tools_module()
     list_user = getattr(tools_module, "list_user_tools", None)
     list_developer = getattr(tools_module, "list_developer_tools", None)
     if list_user is None or list_developer is None:
-        raise KeyError("autodokit.tools 未提供 list_user_tools/list_developer_tools 接口")
+        raise KeyError("工具模块未提供 list_user_tools/list_developer_tools 接口")
 
     if exposure == "internal":
         scope = "developer"
@@ -436,6 +466,65 @@ def list_public_tools(exposure: str | None = None, kind: str | None = None) -> L
         for name in list_developer():
             rows.append({"tool_name": str(name), "scope": "developer"})
     return rows
+
+
+def list_capabilities(include_internal: bool = False) -> List[Dict[str, Any]]:
+    """列出 public capability 摘要。
+
+    Args:
+        include_internal: 是否包含 developer/internal 能力。
+
+    Returns:
+        capability 摘要列表。
+    """
+
+    tools_module = _load_tools_module_with_attrs("list_capabilities")
+    list_capabilities_fn = getattr(tools_module, "list_capabilities")
+    return list_capabilities_fn(include_internal=include_internal)
+
+
+def lint_capabilities() -> Dict[str, Any]:
+    """校验 capability manifest/schema/实现一致性。
+
+    Returns:
+        lint 摘要字典。
+    """
+
+    tools_module = _load_tools_module_with_attrs("lint_public_manifest")
+    lint_fn = getattr(tools_module, "lint_public_manifest")
+    return lint_fn()
+
+
+def invoke_capability(
+    capability_id: str,
+    *,
+    payload: Dict[str, Any] | None = None,
+    caller_context: Dict[str, Any] | None = None,
+    allow_internal: bool = False,
+    workspace_root: str | Path | None = None,
+) -> Dict[str, Any]:
+    """统一执行 public capability。
+
+    Args:
+        capability_id: 能力标识。
+        payload: 输入参数。
+        caller_context: 调用上下文。
+        allow_internal: 是否允许 developer/internal 能力。
+        workspace_root: 工作区根目录，用于审计落盘。
+
+    Returns:
+        统一协议结果字典。
+    """
+
+    tools_module = _load_tools_module_with_attrs("invoke_capability")
+    invoke_fn = getattr(tools_module, "invoke_capability")
+    return invoke_fn(
+        capability_id,
+        payload=payload,
+        caller_context=caller_context,
+        allow_internal=allow_internal,
+        workspace_root=workspace_root,
+    )
 
 
 def invoke_public_tool(
@@ -457,48 +546,37 @@ def invoke_public_tool(
         dict[str, Any]: 调用结果。
 
     Raises:
-        KeyError: 当 `autodokit.tools` 未提供工具调用接口时抛出。
+        KeyError: 当工具模块未提供工具调用接口时抛出。
     """
 
     target = str(capability_id or "").strip()
     if not target:
         raise ValueError("capability_id 不能为空")
 
-    tools_module = _load_autodokit_tools_module()
-    get_tool = getattr(tools_module, "get_tool", None)
-    if get_tool is None:
-        raise KeyError("autodokit.tools 未提供 get_tool 接口")
-
     context = dict(caller_context or {})
     context.setdefault("caller_source", "autodoengine.api")
-    scope = "all" if allow_internal else "user"
 
-    call_args: list[Any]
-    call_kwargs: dict[str, Any]
     if payload is None:
-        call_args = []
-        call_kwargs = {}
+        normalized_payload: dict[str, Any] = {}
     elif isinstance(payload, dict):
         raw_args = payload.get("args", None)
         raw_kwargs = payload.get("kwargs", None)
         if raw_args is None and raw_kwargs is None:
-            call_args = []
-            call_kwargs = dict(payload)
+            normalized_payload = dict(payload)
         else:
-            call_args = list(raw_args or [])
-            call_kwargs = dict(raw_kwargs or {})
+            if raw_args:
+                raise ValueError("invoke_public_tool 已切换到 capability 模式，不再支持 args")
+            normalized_payload = dict(raw_kwargs or {})
     else:
-        call_args = [payload]
-        call_kwargs = {}
+        raise ValueError("invoke_public_tool 的 payload 必须是对象")
 
-    tool_fn = get_tool(target, scope=scope)
-    result = tool_fn(*call_args, **call_kwargs)
-    return {
-        "status": "success",
-        "tool_name": target,
-        "caller": context,
-        "data": result,
-    }
+    return invoke_capability(
+        target,
+        payload=normalized_payload,
+        caller_context=context,
+        allow_internal=allow_internal,
+        workspace_root=normalized_payload.get("workspace_root"),
+    )
 
 
 def prepare_affair_config(*, config: Dict[str, Any], workspace_root: str | Path) -> Dict[str, Any]:

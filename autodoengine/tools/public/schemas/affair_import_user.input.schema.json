@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "source_py_path": { "type": "string" },
+    "workspace_root": { "type": "string" },
+    "source_params_json_path": { "type": "string" },
+    "source_doc_md_path": { "type": "string" },
+    "affair_name": { "type": "string" },
+    "strict": { "type": "boolean" }
+  },
+  "required": ["source_py_path", "workspace_root"],
+  "additionalProperties": false
+}

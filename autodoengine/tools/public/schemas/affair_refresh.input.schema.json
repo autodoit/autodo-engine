@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "workspace_root": { "type": "string" },
+    "strict": { "type": "boolean" }
+  },
+  "required": [],
+  "additionalProperties": false
+}

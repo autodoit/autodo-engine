@@ -1,0 +1,13 @@
+{
+  "capability_id": "affair_refresh",
+  "payload": {
+    "workspace_root": ".",
+    "strict": false
+  },
+  "caller_context": {
+    "caller_source": "agent-template",
+    "agent_name": "通用任务运作智能体"
+  },
+  "workspace_root": ".",
+  "allow_internal": false
+}

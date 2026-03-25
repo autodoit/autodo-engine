@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "graph_file": { "type": "string" }
+  },
+  "required": ["graph_file"],
+  "additionalProperties": false
+}

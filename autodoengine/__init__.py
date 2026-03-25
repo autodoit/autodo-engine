@@ -1,4 +1,4 @@
-"""autodo-kit 包入口。"""
+"""autodo-engine 包入口。"""
 
 from __future__ import annotations
 
@@ -7,10 +7,13 @@ from .api import (
     check_affair_conflicts,
     create_task,
     get_affair_registry_paths,
+    invoke_capability,
     get_runtime_store_paths,
     get_tool,
     import_user_affair,
     import_affair_module,
+    lint_capabilities,
+    list_capabilities,
     list_tools,
     load_graph,
     list_runtime_affairs,
@@ -32,6 +35,9 @@ __all__ = [
     "get_runtime_store_paths",
     "get_affair_registry_paths",
     "list_tools",
+    "list_capabilities",
+    "lint_capabilities",
+    "invoke_capability",
     "get_tool",
     "import_user_affair",
     "prepare_affair_config",

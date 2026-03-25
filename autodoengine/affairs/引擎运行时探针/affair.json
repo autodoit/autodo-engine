@@ -1,0 +1,37 @@
+{
+  "name": "引擎运行时探针",
+  "domain": "business",
+  "owner": "aok",
+  "version": "0.1.0",
+  "summary": "通过 capability facade 初始化并检测运行时路径",
+  "runner": {
+    "module": "autodoengine.affairs.引擎运行时探针.affair",
+    "callable": "execute",
+    "pass_mode": "config_path",
+    "kwargs": {}
+  },
+  "docs": {
+    "md_path": "autodoengine/affairs/引擎运行时探针/affair.md"
+  },
+  "node": {
+    "node_type": "process",
+    "affair_type": "引擎运行时探针",
+    "content_kind": "affair",
+    "allow_multi_input_ports": [],
+    "inputs": {},
+    "outputs": {
+      "result": "json"
+    },
+    "payload_defaults": {
+      "runtime_base_dir": ".tmp/runtime_probe",
+      "output_dir": "output/runtime_probe"
+    },
+    "config": {
+      "runtime_base_dir": ".tmp/runtime_probe",
+      "output_dir": "output/runtime_probe"
+    },
+    "is_leaf": true,
+    "is_business": true,
+    "is_graph": false
+  }
+}

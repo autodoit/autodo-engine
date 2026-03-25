@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "properties": {
+    "config": { "type": "object", "additionalProperties": true },
+    "workspace_root": { "type": "string" }
+  },
+  "required": ["config", "workspace_root"],
+  "additionalProperties": false
+}

@@ -1,0 +1,36 @@
+{
+  "name": "引擎能力巡检",
+  "domain": "business",
+  "owner": "aok",
+  "version": "0.1.0",
+  "summary": "通过 capability facade 执行事务刷新与路径巡检",
+  "runner": {
+    "module": "autodoengine.affairs.引擎能力巡检.affair",
+    "callable": "execute",
+    "pass_mode": "config_path",
+    "kwargs": {}
+  },
+  "docs": {
+    "md_path": "autodoengine/affairs/引擎能力巡检/affair.md"
+  },
+  "node": {
+    "node_type": "process",
+    "affair_type": "引擎能力巡检",
+    "content_kind": "affair",
+    "allow_multi_input_ports": [],
+    "inputs": {},
+    "outputs": {
+      "result": "json"
+    },
+    "payload_defaults": {
+      "output_dir": "output/inspection"
+    },
+    "config": {
+      "output_dir": "output/inspection",
+      "strict": false
+    },
+    "is_leaf": true,
+    "is_business": true,
+    "is_graph": false
+  }
+}

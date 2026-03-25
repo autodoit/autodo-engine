@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import difflib
 import importlib
+import importlib.util
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -273,17 +274,37 @@ def build_registry(
         if not affair_uid:
             continue
         manifest = record.get("manifest") if isinstance(record.get("manifest"), Mapping) else {}
-        if isinstance(manifest, Mapping) and manifest:
-            registry[affair_uid] = dict(manifest)
-            continue
+        normalized_manifest = dict(manifest) if isinstance(manifest, Mapping) else {}
+        if not str(normalized_manifest.get("name") or "").strip():
+            normalized_manifest["name"] = record.get("name") or affair_uid
+        if not str(normalized_manifest.get("domain") or "").strip():
+            normalized_manifest["domain"] = record.get("domain") or "business"
+        if not str(normalized_manifest.get("owner") or "").strip():
+            normalized_manifest["owner"] = record.get("owner") or "aok"
 
-        registry[affair_uid] = {
-            "name": record.get("name") or affair_uid,
-            "domain": record.get("domain") or "business",
-            "owner": record.get("owner") or "aok",
-            "docs": dict(record.get("docs") or {}) if isinstance(record.get("docs"), Mapping) else {},
-            "runner": dict(record.get("runner") or {}) if isinstance(record.get("runner"), Mapping) else {},
-        }
+        docs = normalized_manifest.get("docs") if isinstance(normalized_manifest.get("docs"), Mapping) else {}
+        if not docs:
+            docs = dict(record.get("docs") or {}) if isinstance(record.get("docs"), Mapping) else {}
+        if docs:
+            normalized_manifest["docs"] = dict(docs)
+
+        runner = normalized_manifest.get("runner") if isinstance(normalized_manifest.get("runner"), Mapping) else {}
+        record_runner = dict(record.get("runner") or {}) if isinstance(record.get("runner"), Mapping) else {}
+        merged_runner = dict(runner)
+        if not str(merged_runner.get("module") or "").strip() and str(record_runner.get("module") or "").strip():
+            merged_runner["module"] = record_runner.get("module")
+        if not str(merged_runner.get("source_py_path") or "").strip() and str(record_runner.get("source_py_path") or "").strip():
+            merged_runner["source_py_path"] = record_runner.get("source_py_path")
+        if not str(merged_runner.get("callable") or "").strip() and str(record_runner.get("callable") or "").strip():
+            merged_runner["callable"] = record_runner.get("callable")
+        if not str(merged_runner.get("pass_mode") or "").strip() and str(record_runner.get("pass_mode") or "").strip():
+            merged_runner["pass_mode"] = record_runner.get("pass_mode")
+        if not isinstance(merged_runner.get("kwargs"), Mapping) and isinstance(record_runner.get("kwargs"), Mapping):
+            merged_runner["kwargs"] = dict(record_runner.get("kwargs") or {})
+        if merged_runner:
+            normalized_manifest["runner"] = merged_runner
+
+        registry[affair_uid] = normalized_manifest
 
     return registry
 
@@ -442,7 +463,10 @@ def lint_affairs(root: Path | None = None, *, check_import: bool = True) -> Affa
 
 
 def _normalize_docs_path(md_path_raw: str, *, repo_root: Path) -> Path:
-    """将事务文档路径规范化到当前仓库布局。"""
+    """将事务文档路径规范化到当前仓库布局。
+
+    兼容 `autodoengine/affairs/*` 与 `autodokit/affairs/*` 两种布局。
+    """
 
     raw = str(md_path_raw or "").strip()
     path = Path(raw)
@@ -450,9 +474,11 @@ def _normalize_docs_path(md_path_raw: str, *, repo_root: Path) -> Path:
         return path.resolve()
 
     normalized = raw.replace("\\", "/")
-    if normalized.startswith("autodoengine/affairs/"):
-        normalized = normalized.replace("autodoengine/affairs/", "autodokit/affairs/", 1)
     candidates = [normalized]
+    if normalized.startswith("autodoengine/affairs/"):
+        candidates.append(normalized.replace("autodoengine/affairs/", "autodokit/affairs/", 1))
+    if normalized.startswith("autodokit/affairs/"):
+        candidates.append(normalized.replace("autodokit/affairs/", "autodoengine/affairs/", 1))
 
     for candidate in candidates:
         resolved = (repo_root / Path(candidate)).resolve()
@@ -462,11 +488,34 @@ def _normalize_docs_path(md_path_raw: str, *, repo_root: Path) -> Path:
 
 
 def _normalize_runner_module(module_path: str) -> str:
-    """将事务 runner 模块路径归一化到 `autodo-kit` 包路径。"""
+    """将事务 runner 模块路径归一化到可用实现。
+
+    优先保留原模块；若原模块不可导入，则在 `autodoengine` 与 `autodokit`
+    事务命名空间之间尝试等价转换。
+    """
 
     module = str(module_path or "").strip()
+    if not module:
+        return module
+
+    def _module_available(module_name: str) -> bool:
+        try:
+            return importlib.util.find_spec(module_name) is not None
+        except Exception:
+            return False
+
+    if _module_available(module):
+        return module
+
     if module.startswith("autodoengine.affairs."):
-        return module.replace("autodoengine.affairs.", "autodokit.affairs.", 1)
+        candidate = module.replace("autodoengine.affairs.", "autodokit.affairs.", 1)
+        if _module_available(candidate):
+            return candidate
+    if module.startswith("autodokit.affairs."):
+        candidate = module.replace("autodokit.affairs.", "autodoengine.affairs.", 1)
+        if _module_available(candidate):
+            return candidate
+
     return module
 
 

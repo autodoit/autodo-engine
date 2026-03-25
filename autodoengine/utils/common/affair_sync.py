@@ -42,7 +42,8 @@ def default_aok_affairs_root() -> Path:
     """返回 AOK 内置事务目录。
 
     Returns:
-        已安装 `autodo-kit` 包中的 `autodokit/affairs` 绝对路径。
+        优先返回已安装 `autodo-kit` 包中的 `autodokit/affairs` 绝对路径；
+        若未安装则回退到 `autodoengine/affairs`。
 
     Examples:
         >>> default_aok_affairs_root().name
@@ -50,16 +51,28 @@ def default_aok_affairs_root() -> Path:
     """
 
     spec = importlib.util.find_spec("autodokit")
-    if spec is None:
-        raise ModuleNotFoundError("未找到 autodokit 包。请先安装 autodo-kit。")
+    if spec is not None:
+        package_roots = list(spec.submodule_search_locations or [])
+        if package_roots:
+            kit_affairs_root = (Path(package_roots[0]).resolve() / "affairs").resolve()
+            if kit_affairs_root.exists():
+                return kit_affairs_root
+        if spec.origin is not None:
+            kit_affairs_root = (Path(spec.origin).resolve().parent / "affairs").resolve()
+            if kit_affairs_root.exists():
+                return kit_affairs_root
 
-    package_roots = list(spec.submodule_search_locations or [])
-    if package_roots:
-        return (Path(package_roots[0]).resolve() / "affairs").resolve()
+    return (Path(__file__).resolve().parents[2] / "affairs").resolve()
 
-    if spec.origin is None:
-        raise ModuleNotFoundError("无法定位 autodokit 包目录。")
-    return (Path(spec.origin).resolve().parent / "affairs").resolve()
+
+def default_engine_affairs_root() -> Path:
+    """返回 engine 内置事务目录。
+
+    Returns:
+        `autodoengine/affairs` 绝对路径。
+    """
+
+    return (Path(__file__).resolve().parents[2] / "affairs").resolve()
 
 
 def default_aok_db_path() -> Path:
@@ -329,12 +342,28 @@ def sync_affair_databases(
     aok_root = default_aok_affairs_root()
     aok_db_path = default_aok_db_path()
 
-    aok_records, aok_errors, aok_warnings = build_records_from_root(root=aok_root, owner="aok")
-    errors.extend(aok_errors)
-    warnings.extend(aok_warnings)
+    merged_aok_records: list[dict[str, Any]] = []
+    seen_affair_uids: set[str] = set()
+    aok_roots: list[Path] = []
+    for candidate_root in (aok_root, default_engine_affairs_root()):
+        resolved_root = candidate_root.resolve()
+        if resolved_root in aok_roots:
+            continue
+        aok_roots.append(resolved_root)
 
-    if aok_records:
-        save_registry(aok_db_path, _build_db_payload(aok_records, errors=aok_errors, warnings=aok_warnings))
+    for root in aok_roots:
+        root_records, root_errors, root_warnings = build_records_from_root(root=root, owner="aok")
+        errors.extend(root_errors)
+        warnings.extend(root_warnings)
+        for record in root_records:
+            affair_uid = str(record.get("affair_uid") or "").strip()
+            if not affair_uid or affair_uid in seen_affair_uids:
+                continue
+            seen_affair_uids.add(affair_uid)
+            merged_aok_records.append(record)
+
+    if merged_aok_records:
+        save_registry(aok_db_path, _build_db_payload(merged_aok_records, errors=errors, warnings=warnings))
     elif not aok_db_path.exists():
         save_registry(aok_db_path, _build_db_payload([], errors=[], warnings=[]))
 
