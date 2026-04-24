@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from autodoengine.utils.time_utils import now_compact, now_iso
 
 
 def append_flow_trace_event(
@@ -27,13 +28,12 @@ def append_flow_trace_event(
     """
 
     root = Path(workspace_root).expanduser().resolve()
-    now = datetime.now()
     log_dir = root / "logs" / "run"
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / f"opencode-flow-trace-{now.strftime('%Y-%m-%d')}.jsonl"
+    log_path = log_dir / f"opencode-flow-trace-{now_compact(fmt='%Y-%m-%d')}.jsonl"
 
     record = {
-        "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "timestamp": now_iso(timespec="seconds"),
         **event,
     }
     with log_path.open("a", encoding="utf-8") as handle:

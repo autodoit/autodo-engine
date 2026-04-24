@@ -24,6 +24,7 @@ from autodoengine.scheduling import (
 from autodoengine.scheduling.types import CandidateEdge, SchedulerContext
 from autodoengine.utils.dispatch_map import load_dispatch_map
 from autodoengine.utils.node_execution import NodeExecutionResult
+from autodoengine.utils.time_utils import now_iso
 
 from .content_handlers import dispatch_content_handler
 from .workflow_v2 import WorkflowV2
@@ -56,7 +57,7 @@ class NodeRuntimeV2TraceEvent:
         """
 
         return {
-            "timestamp": _dt.datetime.now().isoformat(timespec="seconds"),
+            "timestamp": now_iso(timespec="seconds"),
             "event": self.event,
             "node_uid": self.node_uid,
             "container": self.container,

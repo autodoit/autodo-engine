@@ -8,8 +8,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
 from typing import Any, Literal
+
+from autodoengine.utils.time_utils import now_iso
 
 ResultCode = Literal["PASS", "RETRY", "BACKTRACK", "BLOCKED"]
 """事务执行结果码。"""
@@ -138,6 +139,6 @@ class DispatchEvent:
 
 
 def utc_now_iso() -> str:
-    """生成统一的 UTC 时间戳。"""
+    """生成统一时间戳（默认北京时间）。"""
 
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
+    return now_iso(timespec="seconds")

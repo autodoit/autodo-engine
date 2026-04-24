@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 from autodoengine.core.enums import DecisionType, TaskAction
 from autodoengine.core.types import DecisionPacket, NodeContext, ResultReceipt, RetryBudget, TaskContext
+from autodoengine.utils.time_utils import now_iso
 from . import action_rules
 from .result_protocol import receipt_to_dict
 
@@ -39,7 +39,7 @@ def _build_artifact_refs(paths: list[str], *, source_action: TaskAction | None) 
                 "path": item,
                 "version": "latest",
                 "hash": f"sha256:{digest}" if digest else "",
-                "generated_at": datetime.now(UTC).isoformat(),
+                "generated_at": now_iso(),
                 "source_action": (source_action or TaskAction.CONTINUE).value,
             }
         )

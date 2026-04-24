@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Mapping
 
@@ -10,6 +9,7 @@ from autodoengine.tools.public.audit import write_audit_record
 from autodoengine.tools.public.permissions import assert_permission
 from autodoengine.tools.public.protocol import build_error_response, build_success_response
 from autodoengine.tools.public.registry import get_capability, list_capabilities as _list_capabilities, resolve_callable
+from autodoengine.utils.time_utils import now_iso
 
 
 def _validate_type(value: Any, expected_type: str) -> bool:
@@ -141,7 +141,7 @@ def invoke_capability(
         "capability_id": target,
         "payload": normalized_payload,
         "caller_context": context,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now_iso(),
     }
 
     try:

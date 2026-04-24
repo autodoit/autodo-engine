@@ -6,6 +6,7 @@ import importlib
 import importlib.util
 import json
 import tempfile
+from contextlib import contextmanager
 from hashlib import sha256
 from dataclasses import asdict
 from pathlib import Path
@@ -28,6 +29,7 @@ from autodoengine.taskdb.storage_paths import get_runtime_store_dirs, get_runtim
 from autodoengine.utils.affair_registry import build_registry, resolve_runner
 from autodoengine.utils.common.affair_manager import import_user_affair as _import_user_affair
 from autodoengine.utils.common.affair_sync import SCHEMA_VERSION, build_runtime_registry, get_affair_registry_paths as _get_affair_registry_paths, sync_affair_databases
+from autodoengine.utils.runtime_context import get_runtime_context, set_runtime_context
 from autodoengine.utils.path_tools import load_json_or_py, resolve_paths_to_absolute
 
 
@@ -122,6 +124,30 @@ def _normalize_affair_outputs(result: Any) -> List[Path]:
         return [Path(str(item)) for item in result]
 
     return [Path(str(result))]
+
+
+@contextmanager
+def _runtime_context_scope(*, workspace_root: Path, affair_uid: str, config_path: Path) -> Any:
+    """临时注入运行时上下文并在退出时恢复。"""
+
+    previous_context = get_runtime_context()
+    global_config_path = workspace_root / "config" / "config.json"
+    if not global_config_path.exists():
+        global_config_path = None
+
+    set_runtime_context(
+        global_config_path=global_config_path,
+        current_affair_uid=affair_uid,
+        current_affair_config_path=config_path,
+    )
+    try:
+        yield
+    finally:
+        set_runtime_context(
+            global_config_path=previous_context.global_config_path,
+            current_affair_uid=previous_context.current_affair_uid,
+            current_affair_config_path=previous_context.current_affair_config_path,
+        )
 
 
 def _serialize_dataclass_or_value(value: Any) -> Any:
@@ -730,7 +756,19 @@ def run_affair(
             config_dict = {}
 
         final_config = prepare_affair_config(config=config_dict, workspace_root=workspace)
-        result = callable_obj(final_config, **merged_kwargs)
+        if config_path is not None:
+            resolved_config_path = Path(config_path).resolve()
+        else:
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:
+                json.dump(final_config, fp, ensure_ascii=False, indent=2)
+                resolved_config_path = Path(fp.name)
+
+        try:
+            with _runtime_context_scope(workspace_root=workspace, affair_uid=uid, config_path=resolved_config_path):
+                result = callable_obj(final_config, **merged_kwargs)
+        finally:
+            if config_path is None and resolved_config_path.exists():
+                resolved_config_path.unlink(missing_ok=True)
         return _normalize_affair_outputs(result)
 
     if pass_mode == "config_path":
@@ -747,7 +785,8 @@ def run_affair(
                 json.dump(final_config, fp, ensure_ascii=False, indent=2)
                 resolved_config_path = Path(fp.name)
 
-        result = callable_obj(str(resolved_config_path), **merged_kwargs)
+        with _runtime_context_scope(workspace_root=workspace, affair_uid=uid, config_path=resolved_config_path):
+            result = callable_obj(str(resolved_config_path), **merged_kwargs)
         return _normalize_affair_outputs(result)
 
     raise ValueError(f"不支持的 pass_mode：{pass_mode}")

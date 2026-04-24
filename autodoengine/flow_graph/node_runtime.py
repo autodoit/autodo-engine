@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping
 
 from autodoengine.utils.node_execution import NodeExecutionResult
+from autodoengine.utils.time_utils import now_compact, now_iso
 from autodoengine.utils.governance import (
     GovernanceRoleConfig,
     build_governance_role_config,
@@ -52,7 +53,7 @@ class NodeRuntimeTraceEvent:
         """
 
         return {
-            "timestamp": _dt.datetime.now().isoformat(timespec="seconds"),
+            "timestamp": now_iso(timespec="seconds"),
             "event": self.event,
             "node_uid": self.node_uid,
             "payload": dict(self.payload or {}),
@@ -570,7 +571,7 @@ def run_node_runtime_workflow(
             output_dir = (workspace_root / output_dir).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        trace_file = output_dir / f"node_runtime_trace_{workflow_path.stem}_{_dt.datetime.now().strftime('%Y%m%d_%H%M%S')}_{run_id[:8]}.json"
+        trace_file = output_dir / f"node_runtime_trace_{workflow_path.stem}_{now_compact(fmt='%Y%m%d_%H%M%S')}_{run_id[:8]}.json"
         payload = {
             "run_id": run_id,
             "workflow_path": str(workflow_path),

@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib
 import json
 import tempfile
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -38,6 +37,7 @@ from autodoengine.taskdb import (
 )
 from autodoengine.utils.affair_registry import build_registry, resolve_runner
 from autodoengine.utils.path_tools import resolve_paths_to_absolute
+from autodoengine.utils.time_utils import now_iso
 
 
 def _build_transition_decision(
@@ -92,7 +92,7 @@ def _emit_agent_message(
             "to": to_role,
             "intent": intent,
             "decision_uid_ref": decision_uid_ref,
-            "created_at": datetime.now(UTC).isoformat(),
+            "created_at": now_iso(),
         },
     )
 
@@ -453,7 +453,7 @@ def write_task_step_records(
             "aa_handling_mode": str((getattr(packet, "receipt", {}) or {}).get("aa_handling_mode") or "preset_script"),
             "fallback_reason_code": (getattr(packet, "receipt", {}) or {}).get("fallback_reason_code"),
             "fallback_attempt": int((getattr(packet, "receipt", {}) or {}).get("fallback_attempt") or 0),
-            "created_at": datetime.now(UTC).isoformat(),
+            "created_at": now_iso(),
         },
     )
     return step_record

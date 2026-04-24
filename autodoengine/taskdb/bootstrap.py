@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .storage_paths import set_runtime_base_dir
+from .storage_paths import get_runtime_store_dirs, set_runtime_base_dir
 
 
 def bootstrap_taskdb(base_dir: str) -> None:
@@ -40,8 +40,7 @@ def bootstrap_runtime_storage(base_dir: str) -> None:
 
     root = Path(base_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
-    bootstrap_taskdb(str(root))
-    bootstrap_logdb(str(root))
-    bootstrap_decisiondb(str(root))
-    bootstrap_graph_registry(str(root))
     set_runtime_base_dir(str(root))
+    dirs = get_runtime_store_dirs(root)
+    for key in ["taskdb", "logdb", "decisiondb", "graph_registry"]:
+        dirs[key].mkdir(parents=True, exist_ok=True)

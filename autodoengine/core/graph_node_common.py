@@ -11,9 +11,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
+
+from autodoengine.utils.time_utils import now_iso
 
 from autodoengine.utils.expression_engine import evaluate_expression
 from autodoengine.utils.path_tools import load_json_or_py
@@ -74,7 +75,7 @@ def write_graph_node_report(
 
     payload = {
         "node_affair_name": node_affair_name,
-        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "timestamp": now_iso(timespec="seconds"),
         "report": report,
     }
     report_path.write_text(__import__("json").dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

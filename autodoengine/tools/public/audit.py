@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 from typing import Any, Dict
+
+from autodoengine.utils.time_utils import now_compact
 
 
 def default_audit_dir(workspace_root: str | Path | None = None) -> Path:
@@ -37,7 +38,7 @@ def write_audit_record(record: Dict[str, Any], *, workspace_root: str | Path | N
 
     audit_dir = default_audit_dir(workspace_root=workspace_root)
     audit_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    timestamp = now_compact(fmt="%Y%m%dT%H%M%S")
     audit_path = audit_dir / f"capability_audit_{timestamp}_{uuid4().hex[:8]}.json"
     audit_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     return audit_path

@@ -25,23 +25,36 @@ class RuntimeContext:
 
     Attributes:
         global_config_path: 当前调度过程使用的全局 config.json 绝对路径（可选）。
+        current_affair_uid: 当前执行的事务 UID（可选）。
+        current_affair_config_path: 当前执行事务的配置文件绝对路径（可选）。
     """
 
     global_config_path: Optional[Path] = None  # 全局 config.json 路径（绝对路径）
+    current_affair_uid: Optional[str] = None
+    current_affair_config_path: Optional[Path] = None
 
 
 _tls = threading.local()
 
 
-def set_runtime_context(*, global_config_path: str | Path | None = None) -> None:
+def set_runtime_context(
+    *,
+    global_config_path: str | Path | None = None,
+    current_affair_uid: str | None = None,
+    current_affair_config_path: str | Path | None = None,
+) -> None:
     """设置线程内运行时上下文。
 
     Args:
         global_config_path: 全局 config.json 路径（可为 str/Path）。传 None 表示清空。
+        current_affair_uid: 当前执行的事务 UID。
+        current_affair_config_path: 当前执行事务的配置文件路径。
     """
 
     ctx = RuntimeContext(
         global_config_path=Path(global_config_path).resolve() if global_config_path else None,
+        current_affair_uid=str(current_affair_uid).strip() if current_affair_uid else None,
+        current_affair_config_path=Path(current_affair_config_path).resolve() if current_affair_config_path else None,
     )
     _tls.ctx = ctx
 
@@ -67,4 +80,24 @@ def get_global_config_path() -> Optional[Path]:
     """
 
     return get_runtime_context().global_config_path
+
+
+def get_current_affair_uid() -> Optional[str]:
+    """获取当前线程上下注入的事务 UID。
+
+    Returns:
+        事务 UID 或 None。
+    """
+
+    return get_runtime_context().current_affair_uid
+
+
+def get_current_affair_config_path() -> Optional[Path]:
+    """获取当前线程上下注入的事务配置路径。
+
+    Returns:
+        事务配置文件路径或 None。
+    """
+
+    return get_runtime_context().current_affair_config_path
 

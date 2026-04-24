@@ -1,4 +1,4 @@
-"""运行时存储路径管理。"""
+"""运行时存储路径管理（统一落到 workspace/database SQLite）。"""
 
 from __future__ import annotations
 
@@ -35,12 +35,16 @@ def get_runtime_store_dirs(base_dir: str | Path | None = None) -> dict[str, Path
     """
 
     base = Path(base_dir).resolve() if base_dir is not None else get_runtime_base_dir()
+    workspace_root = _resolve_workspace_root(base)
+    database_root = workspace_root / "database"
     return {
         "runtime_base_dir": base,
-        "taskdb": base / "taskdb",
-        "logdb": base / "logdb",
-        "decisiondb": base / "decisiondb",
-        "graph_registry": base / "graph_registry",
+        "workspace_root": workspace_root,
+        "database_root": database_root,
+        "taskdb": database_root / "tasks",
+        "logdb": database_root / "logs",
+        "decisiondb": database_root / "decision",
+        "graph_registry": database_root / "runtime_registry",
     }
 
 
@@ -59,27 +63,52 @@ def get_runtime_store_files(base_dir: str | Path | None = None) -> dict[str, Pat
     logdb = folders["logdb"]
     decisiondb = folders["decisiondb"]
     graph_registry = folders["graph_registry"]
+    tasks_db = taskdb / "tasks.db"
+    log_db = logdb / "aok_log.db"
+    decision_db = decisiondb / "decision.db"
+    graph_registry_db = graph_registry / "graph_registry.db"
     return {
-        "tasks": taskdb / "tasks.json",
-        "task_relations": taskdb / "task_relations.json",
-        "task_steps": taskdb / "task_steps.json",
-        "snapshots": taskdb / "snapshots.json",
-        "runtime_events": logdb / "runtime_events.jsonl",
-        "decisions": decisiondb / "decisions.json",
-        "graphs": graph_registry / "graphs.json",
-        "types": graph_registry / "types.json",
+        "tasks": tasks_db,
+        "task_relations": tasks_db,
+        "task_steps": tasks_db,
+        "snapshots": tasks_db,
+        "runtime_events": log_db,
+        "decisions": decision_db,
+        "graphs": graph_registry_db,
+        "types": graph_registry_db,
+        "tasks_db": tasks_db,
+        "log_db": log_db,
+        "decision_db": decision_db,
+        "graph_registry_db": graph_registry_db,
     }
+
+
+def _resolve_workspace_root(base: Path) -> Path:
+    """根据 runtime base 反推 workspace 根目录。"""
+
+    candidates: list[Path] = [base, *base.parents]
+    for item in candidates:
+        if (item / "database").exists() and (item / "config").exists():
+            return item
+
+    for item in candidates:
+        workspace = item / "workspace"
+        if (workspace / "database").exists() and (workspace / "config").exists():
+            return workspace.resolve()
+
+    # 回退：若没有现成 workspace，使用 base 本身。
+    return base.resolve()
 
 
 def resolve_store_file(*, kind: str, name: str) -> Path:
     """解析存储文件绝对路径。"""
 
-    base = get_runtime_base_dir()
+    dirs = get_runtime_store_dirs(get_runtime_base_dir())
     folder = {
-        "taskdb": base / "taskdb",
-        "logdb": base / "logdb",
-        "decisiondb": base / "decisiondb",
-        "graph_registry": base / "graph_registry",
+        "taskdb": dirs["taskdb"],
+        "logdb": dirs["logdb"],
+        "decisiondb": dirs["decisiondb"],
+        "graph_registry": dirs["graph_registry"],
     }[kind]
     folder.mkdir(parents=True, exist_ok=True)
     return folder / name

@@ -6,23 +6,24 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from autodoengine.utils.time_utils import now_iso as _now_iso
+
 
 def now_iso() -> str:
-    """返回 UTC ISO8601 时间字符串。
+    """返回 ISO8601 时间字符串（默认北京时间）。
 
     Returns:
-        当前 UTC 时间字符串。
+        当前时间字符串。
 
     Examples:
         >>> isinstance(now_iso(), str)
         True
     """
 
-    return datetime.now(UTC).isoformat()
+    return _now_iso()
 
 
 def create_empty_registry(*, schema_version: str) -> Dict[str, Any]:
