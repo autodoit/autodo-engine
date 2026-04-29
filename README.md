@@ -14,6 +14,12 @@ AOE 主链的 workflow 资产与 runtime 留痕统一放在 `workflows/workflow_
 uv pip install -e .
 ```
 
+如果需要使用 Playwright 浏览器自动化，还要补装 Chromium 运行时：
+
+```powershell
+uv run playwright install chromium
+```
+
 可选安装 autodo-kit（增强模式）：
 
 ```powershell

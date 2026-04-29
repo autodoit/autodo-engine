@@ -29,8 +29,8 @@ from autodoengine.taskdb.storage_paths import get_runtime_store_dirs, get_runtim
 from autodoengine.utils.affair_registry import build_registry, resolve_runner
 from autodoengine.utils.common.affair_manager import import_user_affair as _import_user_affair
 from autodoengine.utils.common.affair_sync import SCHEMA_VERSION, build_runtime_registry, get_affair_registry_paths as _get_affair_registry_paths, sync_affair_databases
+from autodoengine.utils.path_tools import load_json_or_py, resolve_paths_to_absolute, resolve_portable_path
 from autodoengine.utils.runtime_context import get_runtime_context, set_runtime_context
-from autodoengine.utils.path_tools import load_json_or_py, resolve_paths_to_absolute
 
 
 def _load_tools_module() -> Any:
@@ -93,7 +93,7 @@ def _normalize_workspace_root(workspace_root: str | Path | None) -> Path:
 
     if workspace_root is None:
         return Path.cwd().resolve()
-    return Path(workspace_root).resolve()
+    return resolve_portable_path(str(workspace_root), base_dir=Path.cwd())
 
 
 def _normalize_affair_outputs(result: Any) -> List[Path]:
@@ -179,7 +179,7 @@ def _load_module_from_file(source_py_path: str | Path) -> Any:
         ImportError: 文件无法加载为模块时抛出。
     """
 
-    source_path = Path(source_py_path).resolve()
+    source_path = resolve_portable_path(str(source_py_path), base_dir=Path.cwd())
     if not source_path.exists():
         raise FileNotFoundError(f"事务源码文件不存在：{source_path}")
 
@@ -210,7 +210,7 @@ def load_graph(file_path: str) -> Graph:
         >>> graph = load_graph("demos/data/graph.json")
     """
 
-    target = Path(file_path).resolve()
+    target = resolve_portable_path(file_path, base_dir=Path.cwd())
     if not target.exists():
         raise FileNotFoundError(f"图文件不存在：{target}")
     return load_graph_from_file(str(target))
@@ -316,7 +316,7 @@ def refresh_affair_registry(workspace_root: str | None = None, strict: bool = Fa
         True
     """
 
-    resolved_workspace = Path(workspace_root).resolve() if workspace_root else None
+    resolved_workspace = resolve_portable_path(workspace_root, base_dir=Path.cwd()) if workspace_root else None
     result = sync_affair_databases(workspace_root=resolved_workspace, strict=strict)
     return {
         "schema_version": SCHEMA_VERSION,
@@ -345,7 +345,7 @@ def list_runtime_affairs(workspace_root: str | None = None, strict: bool = False
         True
     """
 
-    resolved_workspace = Path(workspace_root).resolve() if workspace_root else None
+    resolved_workspace = resolve_portable_path(workspace_root, base_dir=Path.cwd()) if workspace_root else None
     registry = build_runtime_registry(workspace_root=resolved_workspace, strict=strict)
     return [dict(item) for item in registry.values()]
 
@@ -365,7 +365,7 @@ def check_affair_conflicts(workspace_root: str | None = None) -> Dict[str, Any]:
         True
     """
 
-    resolved_workspace = Path(workspace_root).resolve() if workspace_root else None
+    resolved_workspace = resolve_portable_path(workspace_root, base_dir=Path.cwd()) if workspace_root else None
     result = sync_affair_databases(workspace_root=resolved_workspace, strict=False)
     return {
         "error_count": len(result.errors),
@@ -669,11 +669,20 @@ def import_user_affair(
         导入摘要字典。
     """
 
+    workspace = _normalize_workspace_root(workspace_root)
     result = _import_user_affair(
-        workspace_root=Path(workspace_root).resolve(),
-        source_py_path=Path(source_py_path).resolve(),
-        source_params_json_path=Path(source_params_json_path).resolve() if source_params_json_path is not None else None,
-        source_doc_md_path=Path(source_doc_md_path).resolve() if source_doc_md_path is not None else None,
+        workspace_root=workspace,
+        source_py_path=resolve_portable_path(str(source_py_path), base_dir=workspace),
+        source_params_json_path=(
+            resolve_portable_path(str(source_params_json_path), base_dir=workspace)
+            if source_params_json_path is not None
+            else None
+        ),
+        source_doc_md_path=(
+            resolve_portable_path(str(source_doc_md_path), base_dir=workspace)
+            if source_doc_md_path is not None
+            else None
+        ),
         affair_name=affair_name,
         strict=strict,
     )
@@ -750,14 +759,14 @@ def run_affair(
         if config is not None:
             config_dict = dict(config)
         elif config_path is not None:
-            path_obj = Path(config_path).resolve()
+            path_obj = resolve_portable_path(str(config_path), base_dir=workspace)
             config_dict = load_json_or_py(path_obj)
         else:
             config_dict = {}
 
         final_config = prepare_affair_config(config=config_dict, workspace_root=workspace)
         if config_path is not None:
-            resolved_config_path = Path(config_path).resolve()
+            resolved_config_path = resolve_portable_path(str(config_path), base_dir=workspace)
         else:
             with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:
                 json.dump(final_config, fp, ensure_ascii=False, indent=2)
@@ -773,7 +782,7 @@ def run_affair(
 
     if pass_mode == "config_path":
         if config_path is not None:
-            resolved_config_path = Path(config_path).resolve()
+            resolved_config_path = resolve_portable_path(str(config_path), base_dir=workspace)
         elif config is not None:
             final_config = prepare_affair_config(config=dict(config), workspace_root=workspace)
             with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:

@@ -22,7 +22,7 @@ def execute(config_path: str, **kwargs: Any) -> Dict[str, Any]:
 
     Examples:
         >>> # doctest: +SKIP
-        >>> execute("C:/tmp/config.json")
+        >>> execute("/tmp/config.json")
     """
 
     _ = kwargs

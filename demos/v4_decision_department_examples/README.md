@@ -8,4 +8,4 @@
 
 推荐运行：
 
-`C:/Users/Ethan/CoreFiles/ProjectsFile/autodo-kit/.venv/Scripts/python.exe demos/scripts/demo_v4_decision_department_examples.py`
+`python3 demos/scripts/demo_v4_decision_department_examples.py`

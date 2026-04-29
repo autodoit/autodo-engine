@@ -32,5 +32,5 @@ exclude = ["demos*", "docs*", "config*", "flowgraphs*", "nodes*"]
 aok = "autodoengine.main:main"
 
 [[tool.uv.index]]
-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+url = "https://pypi.org/simple"
 default = true

@@ -19,7 +19,7 @@ def _demo_root() -> Path:
         demos 根目录绝对路径。
     """
 
-    return Path(r"C:\Users\Ethan\CoreFiles\ProjectsFile\autodo-kit\demos").resolve()
+    return Path("/home/ethan/CoreFiles/ProjectsFile/autodo-kit/demos").resolve()
 
 
 def _graph_file() -> Path:

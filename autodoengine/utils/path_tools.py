@@ -5,8 +5,101 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+
+_WINDOWS_ABS_PATTERN = re.compile(r"^[A-Za-z]:[\\/]")
+
+
+def detect_runtime_family() -> str:
+    """检测当前运行时家族。"""
+
+    if os.name == "nt":
+        return "windows"
+    if os.getenv("WSL_DISTRO_NAME") or os.getenv("WSL_INTEROP"):
+        return "wsl"
+    if sys.platform == "darwin":
+        return "macos"
+    return "linux"
+
+
+def _translate_windows_absolute_path(path_text: str, runtime_family: str) -> str:
+    normalized = path_text.replace("\\", "/")
+    drive = normalized[0].lower()
+    tail = normalized[2:].lstrip("/")
+
+    if runtime_family == "windows":
+        return f"{drive.upper()}:/{tail}" if tail else f"{drive.upper()}:/"
+
+    home = Path(os.path.expanduser("~")).resolve()
+    parts = [part for part in tail.split("/") if part]
+    if len(parts) >= 2 and parts[0].lower() == "users":
+        suffix = Path(*parts[2:]) if len(parts) > 2 else Path()
+        return str(home / suffix)
+
+    if runtime_family == "macos":
+        mount_root = Path("/Volumes") / drive.upper()
+    else:
+        mount_root = Path("/mnt") / drive
+    return str(mount_root / Path(tail)) if tail else str(mount_root)
+
+
+def _translate_posix_absolute_path(path_text: str, runtime_family: str) -> str:
+    normalized = path_text.replace("\\", "/")
+    if runtime_family != "windows":
+        return normalized
+
+    parts = [part for part in normalized.split("/") if part]
+    if len(parts) >= 2 and parts[0].lower() == "mnt" and len(parts[1]) == 1 and parts[1].isalpha():
+        drive = parts[1].upper()
+        tail = "/".join(parts[2:])
+        return f"{drive}:/{tail}" if tail else f"{drive}:/"
+
+    if len(parts) >= 2 and parts[0].lower() in {"users", "home"}:
+        home = Path(os.path.expanduser("~")).resolve()
+        suffix = Path(*parts[2:]) if len(parts) > 2 else Path()
+        return str(home / suffix)
+
+    return normalized
+
+
+def translate_absolute_path_to_runtime(path_text: str, runtime_family: str | None = None) -> str | None:
+    """将跨平台绝对路径翻译为当前运行时可消费的绝对路径字符串。"""
+
+    normalized = str(path_text or "").strip()
+    if not normalized:
+        return None
+
+    runtime = runtime_family or detect_runtime_family()
+    if _WINDOWS_ABS_PATTERN.match(normalized):
+        return _translate_windows_absolute_path(normalized, runtime)
+    if normalized.startswith("/"):
+        return _translate_posix_absolute_path(normalized, runtime)
+    return None
+
+
+def resolve_portable_path(raw: str, *, base_dir: Path) -> Path:
+    """按当前运行时统一解析路径（支持 Windows/WSL/macOS/Linux 输入）。"""
+
+    if not raw or not str(raw).strip():
+        raise ValueError("路径配置为空，无法解析。")
+
+    runtime = detect_runtime_family()
+    expanded = os.path.expandvars(os.path.expanduser(str(raw).strip()))
+    normalized = expanded if runtime == "windows" else expanded.replace("\\", "/")
+
+    translated = translate_absolute_path_to_runtime(normalized, runtime)
+    if translated is not None:
+        return Path(translated).expanduser().resolve()
+
+    path_obj = Path(normalized)
+    if path_obj.is_absolute():
+        return path_obj.resolve()
+
+    return (Path(base_dir).resolve() / path_obj).resolve()
 
 
 def load_json_or_py(config_path: Path) -> Dict[str, Any]:
@@ -34,25 +127,18 @@ def resolve_path(raw: str, config_path: Path, env_root_var: str = "PROJECT_ROOT"
 
     if not raw:
         return Path()
-    expanded = os.path.expanduser(str(raw))
-    path_obj = Path(expanded)
-    if path_obj.is_absolute():
-        try:
-            return path_obj.resolve()
-        except Exception:
-            return path_obj
-
     env_root = os.getenv(env_root_var)
     if env_root:
-        return (Path(env_root) / path_obj).resolve()
+        env_root_path = resolve_portable_path(env_root, base_dir=config_path.parent)
+        return resolve_portable_path(str(raw), base_dir=env_root_path)
 
-    return (config_path.parent / path_obj).resolve()
+    return resolve_portable_path(str(raw), base_dir=config_path.parent)
 
 
 def find_repo_root(start: Path) -> Path:
     """从给定路径向上查找仓库根目录。"""
 
-    cursor = Path(start).resolve()
+    cursor = resolve_portable_path(str(start), base_dir=Path.cwd())
     if cursor.is_file():
         cursor = cursor.parent
     for candidate in [cursor, *cursor.parents]:
@@ -71,18 +157,7 @@ def resolve_path_from_base(raw: str, *, base_dir: Path) -> Path:
     if not raw or not str(raw).strip():
         raise ValueError("路径配置为空，无法解析。")
 
-    expanded = os.path.expandvars(os.path.expanduser(str(raw).strip()))
-    path_obj = Path(expanded)
-    if path_obj.is_absolute():
-        try:
-            return path_obj.resolve()
-        except Exception:
-            return path_obj
-
-    try:
-        return (Path(base_dir).resolve() / path_obj).resolve()
-    except Exception:
-        return Path(base_dir).resolve() / path_obj
+    return resolve_portable_path(str(raw), base_dir=Path(base_dir))
 
 
 def resolve_config_paths(cfg: dict, config_path: Path, workspace_root: Path | None = None) -> dict:
@@ -90,9 +165,13 @@ def resolve_config_paths(cfg: dict, config_path: Path, workspace_root: Path | No
 
     cfg = dict(cfg)
 
-    config_path = config_path.resolve()
+    config_path = resolve_portable_path(str(config_path), base_dir=Path.cwd())
     config_dir = config_path.parent
-    repo_root = workspace_root.resolve() if workspace_root is not None else find_repo_root(config_dir)
+    repo_root = (
+        resolve_portable_path(str(workspace_root), base_dir=config_dir)
+        if workspace_root is not None
+        else find_repo_root(config_dir)
+    )
 
     def _to_abs_dir(raw_dir: str | None, *, default_dir: Path) -> Path:
         if not raw_dir or not str(raw_dir).strip():
@@ -101,12 +180,10 @@ def resolve_config_paths(cfg: dict, config_path: Path, workspace_root: Path | No
 
     workflow_dir_raw = cfg.get("workflow_dir")
     workflow_dir_default = (
-        Path(str(workflow_dir_raw))
+        resolve_portable_path(str(workflow_dir_raw), base_dir=repo_root)
         if isinstance(workflow_dir_raw, str) and workflow_dir_raw.strip()
         else repo_root
     )
-    if not workflow_dir_default.is_absolute():
-        workflow_dir_default = (repo_root / workflow_dir_default).resolve()
 
     input_base_dir = _to_abs_dir(cfg.get("input_base_dir"), default_dir=repo_root)
     output_default_dir = repo_root if workspace_root is not None else workflow_dir_default
@@ -117,6 +194,10 @@ def resolve_config_paths(cfg: dict, config_path: Path, workspace_root: Path | No
             return None
 
         expanded = os.path.expandvars(os.path.expanduser(str(path_value)))
+        translated = translate_absolute_path_to_runtime(expanded, detect_runtime_family())
+        if translated is not None:
+            return str(Path(translated).resolve())
+
         path_obj = Path(expanded)
         if path_obj.is_absolute():
             return str(path_obj)
@@ -147,9 +228,7 @@ def resolve_paths_to_absolute(
 
     if workspace_root is None:
         raise ValueError("workspace_root 不能为空")
-    workspace_root = Path(workspace_root)
-    if not workspace_root.is_absolute():
-        workspace_root = workspace_root.resolve()
+    workspace_root = resolve_portable_path(str(workspace_root), base_dir=Path.cwd())
 
     default_keys = {
         "output_dir",
@@ -187,6 +266,10 @@ def resolve_paths_to_absolute(
 
     def _to_abs(value: str) -> str:
         expanded = os.path.expandvars(os.path.expanduser(str(value).strip()))
+        translated = translate_absolute_path_to_runtime(expanded, detect_runtime_family())
+        if translated is not None:
+            return str(Path(translated).resolve())
+
         path_obj = Path(expanded)
         if path_obj.is_absolute():
             try:
@@ -225,11 +308,14 @@ def resolve_workflow_config_path(
     if not raw or not str(raw).strip():
         raise ValueError("workflow 配置路径为空，无法解析。")
 
-    workspace_root = Path(workspace_root)
-    if not workspace_root.is_absolute():
-        workspace_root = workspace_root.resolve()
+    workspace_root = resolve_portable_path(str(workspace_root), base_dir=Path.cwd())
 
-    path_obj = Path(os.path.expandvars(os.path.expanduser(str(raw).strip())))
+    expanded_raw = os.path.expandvars(os.path.expanduser(str(raw).strip()))
+    translated = translate_absolute_path_to_runtime(expanded_raw, detect_runtime_family())
+    if translated is not None:
+        return Path(translated).resolve()
+
+    path_obj = Path(expanded_raw)
     if path_obj.is_absolute():
         try:
             return path_obj.resolve()
@@ -239,7 +325,7 @@ def resolve_workflow_config_path(
     candidates: List[Path] = [resolve_path_from_base(str(path_obj), base_dir=workspace_root)]
 
     if config_path is not None:
-        config_dir = Path(config_path).resolve().parent
+        config_dir = resolve_portable_path(str(config_path), base_dir=workspace_root).parent
         candidates.append(resolve_path_from_base(str(path_obj), base_dir=config_dir))
 
     parts = [part for part in path_obj.parts if part not in {".", ""}]

@@ -14,8 +14,8 @@
 
 推荐运行方式：
 
-```powershell
-C:/Users/Ethan/CoreFiles/ProjectsFile/autodo-kit/.venv/Scripts/python.exe demos/scripts/demo_v3_decision_rule_framework_examples.py
+```bash
+python3 demos/scripts/demo_v3_decision_rule_framework_examples.py
 ```
 
 脚本会分别运行三套模板，并把结果写到：

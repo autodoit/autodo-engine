@@ -15,7 +15,7 @@ from autodokit.taskdb import decision_store, list_graphs, log_store, relation_st
 def _demo_root() -> Path:
     """返回 demos 根目录。"""
 
-    return Path(r"C:\Users\Ethan\CoreFiles\ProjectsFile\autodo-kit\demos").resolve()
+    return Path("/home/ethan/CoreFiles/ProjectsFile/autodo-kit/demos").resolve()
 
 
 def _runtime_root() -> Path:
