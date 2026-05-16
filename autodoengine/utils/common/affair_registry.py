@@ -29,7 +29,7 @@ def _load_aok_metadata_overrides() -> Dict[str, Dict[str, Any]]:
         return {}
 
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception:
         return {}
 
@@ -91,7 +91,7 @@ def read_manifest(manifest_path: Path) -> Dict[str, Any]:
         raise ValueError(f"读取事务清单失败：{manifest_path}：文件不存在")
 
     try:
-        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        data = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
     except Exception as exc:
         raise ValueError(f"读取事务清单失败：{manifest_path}：{exc}") from exc
     if not isinstance(data, dict):

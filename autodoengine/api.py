@@ -29,7 +29,12 @@ from autodoengine.taskdb.storage_paths import get_runtime_store_dirs, get_runtim
 from autodoengine.utils.affair_registry import build_registry, resolve_runner
 from autodoengine.utils.common.affair_manager import import_user_affair as _import_user_affair
 from autodoengine.utils.common.affair_sync import SCHEMA_VERSION, build_runtime_registry, get_affair_registry_paths as _get_affair_registry_paths, sync_affair_databases
-from autodoengine.utils.path_tools import load_json_or_py, resolve_paths_to_absolute, resolve_portable_path
+from autodoengine.utils.path_tools import (
+    load_json_or_py,
+    resolve_paths_to_absolute,
+    resolve_paths_to_absolute_with_audit,
+    resolve_portable_path,
+)
 from autodoengine.utils.runtime_context import get_runtime_context, set_runtime_context
 
 
@@ -619,7 +624,26 @@ def prepare_affair_config(*, config: Dict[str, Any], workspace_root: str | Path)
     workspace = _normalize_workspace_root(workspace_root)
     normalized = dict(config or {})
     normalized.setdefault("_workspace_root", str(workspace))
-    return resolve_paths_to_absolute(normalized, workspace_root=workspace)
+
+    try:
+        aok_module = importlib.import_module("autodokit")
+        aok_prepare_affair_config = getattr(aok_module, "prepare_affair_config", None)
+        if callable(aok_prepare_affair_config):
+            resolved = dict(aok_prepare_affair_config(config=normalized, workspace_root=workspace))
+            resolved.setdefault(
+                "_path_preprocess_summary",
+                {
+                    "processor": "autodokit.prepare_affair_config",
+                    "workspace_root": str(workspace),
+                },
+            )
+            return resolved
+    except Exception:
+        pass
+
+    resolved, audit = resolve_paths_to_absolute_with_audit(normalized, workspace_root=workspace)
+    resolved["_path_preprocess_summary"] = audit
+    return resolved
 
 
 def import_affair_module(affair_uid: str, *, workspace_root: str | Path | None = None, strict: bool = False) -> Any:
@@ -782,20 +806,23 @@ def run_affair(
 
     if pass_mode == "config_path":
         if config_path is not None:
-            resolved_config_path = resolve_portable_path(str(config_path), base_dir=workspace)
+            raw_config_path = resolve_portable_path(str(config_path), base_dir=workspace)
+            raw_config = load_json_or_py(raw_config_path)
+            final_config = prepare_affair_config(config=raw_config, workspace_root=workspace)
         elif config is not None:
             final_config = prepare_affair_config(config=dict(config), workspace_root=workspace)
-            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:
-                json.dump(final_config, fp, ensure_ascii=False, indent=2)
-                resolved_config_path = Path(fp.name)
         else:
             final_config = prepare_affair_config(config={}, workspace_root=workspace)
-            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:
-                json.dump(final_config, fp, ensure_ascii=False, indent=2)
-                resolved_config_path = Path(fp.name)
 
-        with _runtime_context_scope(workspace_root=workspace, affair_uid=uid, config_path=resolved_config_path):
-            result = callable_obj(str(resolved_config_path), **merged_kwargs)
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:
+            json.dump(final_config, fp, ensure_ascii=False, indent=2)
+            resolved_config_path = Path(fp.name)
+
+        try:
+            with _runtime_context_scope(workspace_root=workspace, affair_uid=uid, config_path=resolved_config_path):
+                result = callable_obj(str(resolved_config_path), **merged_kwargs)
+        finally:
+            resolved_config_path.unlink(missing_ok=True)
         return _normalize_affair_outputs(result)
 
     raise ValueError(f"不支持的 pass_mode：{pass_mode}")

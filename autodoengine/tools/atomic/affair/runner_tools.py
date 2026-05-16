@@ -67,10 +67,10 @@ def import_user_affair_tool(
     from autodoengine import api
 
     return api.import_user_affair(
-        source_py_path=Path(source_py_path).resolve(),
-        workspace_root=Path(workspace_root).resolve(),
-        source_params_json_path=Path(source_params_json_path).resolve() if source_params_json_path is not None else None,
-        source_doc_md_path=Path(source_doc_md_path).resolve() if source_doc_md_path is not None else None,
+        source_py_path=source_py_path,
+        workspace_root=workspace_root,
+        source_params_json_path=source_params_json_path,
+        source_doc_md_path=source_doc_md_path,
         affair_name=affair_name,
         strict=strict,
     )

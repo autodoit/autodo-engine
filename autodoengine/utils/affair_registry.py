@@ -36,6 +36,40 @@ class AffairLintResult:
     scanned_count: int
 
 
+def _candidate_registry_keys(raw_key: str) -> List[str]:
+    """为外部事务标识生成候选 registry key。"""
+
+    key = str(raw_key or "").strip()
+    if not key:
+        return []
+    candidates: List[str] = [key]
+    if key.startswith("ar_"):
+        parts = key.split("_", 2)
+        if len(parts) >= 3 and parts[2]:
+            candidates.append(parts[2])
+        try:
+            from autodokit.tools.affair_entry_registry_tools import MAINLINE_AFFAIR_ENTRY_MAP
+
+            for base in MAINLINE_AFFAIR_ENTRY_MAP.values():
+                if str(base.get("affair_uid") or "").strip() != key:
+                    continue
+                module_name = str(base.get("module") or "").strip()
+                module_parts = module_name.split(".")
+                if len(module_parts) >= 2 and module_parts[-1] == "affair":
+                    candidates.append(module_parts[-2])
+                break
+        except Exception:
+            pass
+    deduped: List[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        deduped.append(candidate)
+    return deduped
+
+
 def _default_affairs_root() -> Path:
     """返回默认事务目录根路径。
 
@@ -76,7 +110,7 @@ def _read_manifest(manifest_path: Path) -> Dict[str, Any]:
     """
 
     try:
-        raw = manifest_path.read_text(encoding="utf-8")
+        raw = manifest_path.read_text(encoding="utf-8-sig")
         data = json.loads(raw) if raw.strip() else {}
     except Exception as exc:
         raise ValueError(f"读取事务清单失败：{manifest_path}：{exc}") from exc
@@ -354,11 +388,16 @@ def resolve_runner(affair_name: str, registry: Mapping[str, Mapping[str, Any]]) 
         ValueError: runner 结构不完整时抛出。
     """
 
-    key = str(affair_name or "").strip()
-    if key not in registry:
-        candidates = difflib.get_close_matches(key, list(registry.keys()), n=5, cutoff=0.45)
+    original_key = str(affair_name or "").strip()
+    key = ""
+    for candidate in _candidate_registry_keys(original_key):
+        if candidate in registry:
+            key = candidate
+            break
+    if not key:
+        candidates = difflib.get_close_matches(original_key, list(registry.keys()), n=5, cutoff=0.45)
         hint = f"；候选：{', '.join(candidates)}" if candidates else ""
-        raise KeyError(f"事务不存在：{key}{hint}")
+        raise KeyError(f"事务不存在：{original_key}{hint}")
 
     manifest = registry[key]
     runner = manifest.get("runner") if isinstance(manifest.get("runner"), Mapping) else {}
@@ -394,9 +433,14 @@ def get_affair_docs(affair_name: str, registry: Mapping[str, Mapping[str, Any]])
         ValueError: 文档路径不存在。
     """
 
-    key = str(affair_name or "").strip()
-    if key not in registry:
-        raise KeyError(f"事务不存在：{key}")
+    original_key = str(affair_name or "").strip()
+    key = ""
+    for candidate in _candidate_registry_keys(original_key):
+        if candidate in registry:
+            key = candidate
+            break
+    if not key:
+        raise KeyError(f"事务不存在：{original_key}")
 
     docs = registry[key].get("docs") if isinstance(registry[key].get("docs"), Mapping) else {}
     md_path_raw = str(docs.get("md_path") or "").strip()
