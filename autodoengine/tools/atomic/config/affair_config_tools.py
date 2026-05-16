@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 
-from autodoengine.utils.path_tools import resolve_paths_to_absolute
+from autodoengine.utils.path_tools import resolve_paths_to_absolute_with_audit
 
 
 def prepare_affair_config_tool(config: Dict[str, Any], workspace_root: str | Path) -> Dict[str, Any]:
@@ -22,4 +22,6 @@ def prepare_affair_config_tool(config: Dict[str, Any], workspace_root: str | Pat
     workspace = Path(workspace_root).resolve()
     normalized = dict(config or {})
     normalized.setdefault("_workspace_root", str(workspace))
-    return resolve_paths_to_absolute(normalized, workspace_root=workspace)
+    resolved, audit = resolve_paths_to_absolute_with_audit(normalized, workspace_root=workspace)
+    resolved["_path_preprocess_summary"] = audit
+    return resolved

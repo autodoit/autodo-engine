@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import importlib
 import json
 import os
 import re
@@ -12,6 +13,17 @@ from typing import Any, Dict, List, Optional
 
 
 _WINDOWS_ABS_PATTERN = re.compile(r"^[A-Za-z]:[\\/]")
+
+
+def _load_aok_resolve_portable_path() -> Any | None:
+    """优先加载 AOK 的路径解析器。"""
+
+    try:
+        module = importlib.import_module("autodokit.path_compat")
+    except ModuleNotFoundError:
+        return None
+    resolver = getattr(module, "resolve_portable_path", None)
+    return resolver if callable(resolver) else None
 
 
 def detect_runtime_family() -> str:
@@ -86,6 +98,13 @@ def resolve_portable_path(raw: str, *, base_dir: Path) -> Path:
 
     if not raw or not str(raw).strip():
         raise ValueError("路径配置为空，无法解析。")
+
+    aok_resolver = _load_aok_resolve_portable_path()
+    if aok_resolver is not None:
+        try:
+            return Path(aok_resolver(str(raw), base=Path(base_dir))).resolve()
+        except Exception:
+            pass
 
     runtime = detect_runtime_family()
     expanded = os.path.expandvars(os.path.expanduser(str(raw).strip()))
@@ -265,21 +284,7 @@ def resolve_paths_to_absolute(
     keys = default_keys if path_keys is None else set(path_keys)
 
     def _to_abs(value: str) -> str:
-        expanded = os.path.expandvars(os.path.expanduser(str(value).strip()))
-        translated = translate_absolute_path_to_runtime(expanded, detect_runtime_family())
-        if translated is not None:
-            return str(Path(translated).resolve())
-
-        path_obj = Path(expanded)
-        if path_obj.is_absolute():
-            try:
-                return str(path_obj.resolve())
-            except Exception:
-                return str(path_obj)
-        try:
-            return str((workspace_root / path_obj).resolve())
-        except Exception:
-            return str(workspace_root / path_obj)
+        return str(resolve_portable_path(str(value), base_dir=workspace_root))
 
     def _walk(obj: Any, *, parent_key: str | None = None) -> Any:
         if isinstance(obj, dict):
@@ -295,6 +300,98 @@ def resolve_paths_to_absolute(
         return obj
 
     return _walk(dict(cfg))
+
+
+def resolve_paths_to_absolute_with_audit(
+    cfg: Dict[str, Any],
+    *,
+    workspace_root: Path,
+    path_keys: Optional[set[str]] = None,
+) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    """将配置中的路径字段绝对化，并返回简要审计信息。"""
+
+    if workspace_root is None:
+        raise ValueError("workspace_root 不能为空")
+    workspace_root = resolve_portable_path(str(workspace_root), base_dir=Path.cwd())
+
+    default_keys = {
+        "output_dir",
+        "input_table_csv",
+        "aof_md_path",
+        "emit_python_path",
+        "emit_compiled_workflow_path",
+        "workflow_path",
+        "bibtex_path",
+        "input_bibtex_path",
+        "output_bibtex_path",
+        "docs_path",
+        "chunks_path",
+        "pdf_dir",
+        "input_pdf_dir",
+        "output_md_dir",
+        "output_log",
+        "output_structured_dir",
+        "secrets_file",
+        "config_path",
+        "input_documents_dir",
+        "unit_db_dir",
+        "input_docs_jsonl",
+        "input_chunks_jsonl",
+        "input_matrix_jsonl",
+        "candidate_csv",
+        "excluded_csv",
+        "report_path",
+        "index_dir",
+        "keyword_set_json",
+        "input_keywords",
+        "reference_materials_dir",
+    }
+    keys = default_keys if path_keys is None else set(path_keys)
+    audit_items: List[Dict[str, str]] = []
+    changed_count = 0
+    touched_count = 0
+
+    def _to_abs(value: str) -> str:
+        return str(resolve_portable_path(str(value), base_dir=workspace_root))
+
+    def _walk(obj: Any, *, trail: str = "") -> Any:
+        nonlocal changed_count
+        nonlocal touched_count
+        if isinstance(obj, dict):
+            out: Dict[str, Any] = {}
+            for key, value in obj.items():
+                next_trail = f"{trail}.{key}" if trail else str(key)
+                if isinstance(key, str) and key in keys and isinstance(value, str) and value.strip():
+                    touched_count += 1
+                    resolved = _to_abs(value)
+                    out[key] = resolved
+                    if resolved != value:
+                        changed_count += 1
+                    if len(audit_items) < 50:
+                        audit_items.append(
+                            {
+                                "key": key,
+                                "path": next_trail,
+                                "before": value,
+                                "after": resolved,
+                                "changed": "yes" if resolved != value else "no",
+                            }
+                        )
+                else:
+                    out[key] = _walk(value, trail=next_trail)
+            return out
+        if isinstance(obj, list):
+            return [_walk(item, trail=f"{trail}[{index}]") for index, item in enumerate(obj)]
+        return obj
+
+    normalized = _walk(dict(cfg))
+    audit = {
+        "workspace_root": str(workspace_root),
+        "touched_count": touched_count,
+        "changed_count": changed_count,
+        "sample": audit_items,
+    }
+    return normalized, audit
 
 
 def resolve_workflow_config_path(

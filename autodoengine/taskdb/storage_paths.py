@@ -64,7 +64,7 @@ def get_runtime_store_files(base_dir: str | Path | None = None) -> dict[str, Pat
     decisiondb = folders["decisiondb"]
     graph_registry = folders["graph_registry"]
     tasks_db = taskdb / "tasks.db"
-    log_db = logdb / "aok_log.db"
+    log_db = logdb / "log.db"
     decision_db = decisiondb / "decision.db"
     graph_registry_db = graph_registry / "graph_registry.db"
     return {

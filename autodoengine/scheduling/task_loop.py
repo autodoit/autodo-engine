@@ -36,7 +36,7 @@ from autodoengine.taskdb import (
     task_store,
 )
 from autodoengine.utils.affair_registry import build_registry, resolve_runner
-from autodoengine.utils.path_tools import resolve_paths_to_absolute
+from autodoengine.utils.path_tools import resolve_paths_to_absolute_with_audit
 from autodoengine.utils.time_utils import now_iso
 
 
@@ -160,7 +160,8 @@ def _execute_affair_script(node_context: NodeContext, task_context: TaskContext)
 
         resolved_workspace_root = workspace_root if workspace_root is not None else Path.cwd().resolve()
         raw_config.setdefault("_workspace_root", str(resolved_workspace_root))
-        config = resolve_paths_to_absolute(raw_config, workspace_root=resolved_workspace_root)
+        config, path_audit = resolve_paths_to_absolute_with_audit(raw_config, workspace_root=resolved_workspace_root)
+        config["_path_preprocess_summary"] = path_audit
 
         if str(runner["pass_mode"]) == "config_dict":
             result = callable_obj(config, **dict(runner.get("kwargs") or {}))
