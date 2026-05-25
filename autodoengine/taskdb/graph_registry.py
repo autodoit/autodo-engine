@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from dataclasses import asdict
 
 from autodoengine.flow_graph.models import Graph
@@ -24,23 +25,23 @@ def _connect() -> sqlite3.Connection:
 def _ensure_schema(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
-        CREATE TABLE IF NOT EXISTS graphs (
-            graph_uid TEXT PRIMARY KEY,
-            graph_name TEXT NOT NULL,
-            graph_version TEXT NOT NULL,
-            graph_payload_json TEXT NOT NULL,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS "图注册表" (
+            uid_图 TEXT PRIMARY KEY,
+            图名称 TEXT NOT NULL,
+            图版本 TEXT NOT NULL,
+            图载荷JSON TEXT NOT NULL,
+            创建时间 TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
     connection.execute(
         """
-        CREATE TABLE IF NOT EXISTS types (
-            type_uid TEXT PRIMARY KEY,
-            type_kind TEXT NOT NULL,
-            type_name TEXT NOT NULL,
-            schema_ref TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS "类型注册表" (
+            uid_类型 TEXT PRIMARY KEY,
+            类型类别 TEXT NOT NULL,
+            类型名称 TEXT NOT NULL,
+            Schema引用 TEXT,
+            创建时间 TEXT DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
@@ -50,11 +51,11 @@ def _ensure_schema(connection: sqlite3.Connection) -> None:
 def register_graph(graph: Graph) -> None:
     """注册静态图。"""
 
-    with _connect() as connection:
+    with closing(_connect()) as connection, connection:
         connection.execute(
             """
-            INSERT OR REPLACE INTO graphs (
-                graph_uid, graph_name, graph_version, graph_payload_json
+            INSERT OR REPLACE INTO "图注册表" (
+                uid_图, 图名称, 图版本, 图载荷JSON
             ) VALUES (?, ?, ?, ?)
             """,
             (
@@ -69,10 +70,10 @@ def register_graph(graph: Graph) -> None:
 def get_graph(graph_uid: str) -> Graph:
     """读取静态图。"""
 
-    with _connect() as connection:
-        row = connection.execute("SELECT graph_payload_json FROM graphs WHERE graph_uid=?", (graph_uid,)).fetchone()
+    with closing(_connect()) as connection, connection:
+        row = connection.execute("SELECT 图载荷JSON FROM \"图注册表\" WHERE uid_图=?", (graph_uid,)).fetchone()
     if row is not None:
-        payload = json.loads(str(row["graph_payload_json"]))
+        payload = json.loads(str(row["图载荷JSON"]))
         return load_graph_from_dict(payload)
     raise KeyError(f"图不存在：{graph_uid}")
 
@@ -80,16 +81,21 @@ def get_graph(graph_uid: str) -> Graph:
 def list_graphs() -> list[dict[str, object]]:
     """列出全部图。"""
 
-    with _connect() as connection:
-        rows = connection.execute("SELECT graph_uid, graph_name, graph_version, graph_payload_json FROM graphs").fetchall()
+    with closing(_connect()) as connection, connection:
+        rows = connection.execute("SELECT uid_图, 图名称, 图版本, 图载荷JSON FROM \"图注册表\"").fetchall()
     result: list[dict[str, object]] = []
     for row in rows:
+        graph_payload = json.loads(str(row["图载荷JSON"]))
         result.append(
             {
-                "graph_uid": str(row["graph_uid"]),
-                "graph_name": str(row["graph_name"]),
-                "graph_version": str(row["graph_version"]),
-                "graph_payload": json.loads(str(row["graph_payload_json"])),
+                "uid_图": str(row["uid_图"]),
+                "图名称": str(row["图名称"]),
+                "图版本": str(row["图版本"]),
+                "图载荷": graph_payload,
+                "graph_uid": str(row["uid_图"]),
+                "graph_name": str(row["图名称"]),
+                "graph_version": str(row["图版本"]),
+                "graph_payload": graph_payload,
             }
         )
     return result
@@ -98,10 +104,10 @@ def list_graphs() -> list[dict[str, object]]:
 def register_type(type_kind: str, type_name: str, schema_ref: str | None = None) -> None:
     """注册类型。"""
 
-    with _connect() as connection:
+    with closing(_connect()) as connection, connection:
         connection.execute(
             """
-            INSERT OR REPLACE INTO types (type_uid, type_kind, type_name, schema_ref)
+            INSERT OR REPLACE INTO "类型注册表" (uid_类型, 类型类别, 类型名称, Schema引用)
             VALUES (?, ?, ?, ?)
             """,
             (f"{type_kind}:{type_name}", type_kind, type_name, schema_ref),
@@ -111,17 +117,21 @@ def register_type(type_kind: str, type_name: str, schema_ref: str | None = None)
 def get_type(type_uid: str) -> dict[str, object]:
     """读取类型注册信息。"""
 
-    with _connect() as connection:
+    with closing(_connect()) as connection, connection:
         row = connection.execute(
-            "SELECT type_uid, type_kind, type_name, schema_ref FROM types WHERE type_uid=?",
+            "SELECT uid_类型, 类型类别, 类型名称, Schema引用 FROM \"类型注册表\" WHERE uid_类型=?",
             (type_uid,),
         ).fetchone()
     if row is not None:
         return {
-            "type_uid": str(row["type_uid"]),
-            "type_kind": str(row["type_kind"]),
-            "type_name": str(row["type_name"]),
-            "schema_ref": row["schema_ref"],
+            "uid_类型": str(row["uid_类型"]),
+            "类型类别": str(row["类型类别"]),
+            "类型名称": str(row["类型名称"]),
+            "Schema引用": row["Schema引用"],
+            "type_uid": str(row["uid_类型"]),
+            "type_kind": str(row["类型类别"]),
+            "type_name": str(row["类型名称"]),
+            "schema_ref": row["Schema引用"],
         }
     raise KeyError(f"类型不存在：{type_uid}")
 
@@ -129,9 +139,9 @@ def get_type(type_uid: str) -> dict[str, object]:
 def validate_registered_affair(affair_uid: str) -> bool:
     """校验事务是否已注册。"""
 
-    with _connect() as connection:
+    with closing(_connect()) as connection, connection:
         row = connection.execute(
-            "SELECT 1 FROM types WHERE type_kind='affair' AND type_name=? LIMIT 1",
+            "SELECT 1 FROM \"类型注册表\" WHERE 类型类别='affair' AND 类型名称=? LIMIT 1",
             (affair_uid,),
         ).fetchone()
     return row is not None

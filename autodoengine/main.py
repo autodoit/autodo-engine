@@ -12,6 +12,9 @@ from autodoengine.taskdb import decision_store, log_store, task_store
 from autodoengine.tools.adapters.cli import handle_cli_command, register_cli_subcommands
 
 
+默认决策部门UID = "dept-default"
+
+
 def _to_jsonable(value: object) -> object:
     """将 CLI 输出值转换为 JSON 兼容对象。"""
 
@@ -38,6 +41,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_create.add_argument("--current-node-uid", required=True)
     p_create.add_argument("--parent-task-uid", default=None)
 
+    p_create_request = sub.add_parser("create-task-request", help="创建事务请求")
+    p_create_request.add_argument("--request-type", required=True)
+    p_create_request.add_argument("--target-affair-uid", required=True)
+    p_create_request.add_argument("--task-uid", default=None)
+    p_create_request.add_argument("--source-object-type", default="")
+    p_create_request.add_argument("--source-object-uid", default="")
+    p_create_request.add_argument("--node-code", default="")
+    p_create_request.add_argument("--config-path", default="")
+    p_create_request.add_argument("--priority-score", type=float, default=0.0)
+    p_create_request.add_argument("--source", default="任务系统")
+    p_create_request.add_argument("--request-contract-json", default="{}")
+    p_create_request.add_argument("--payload-json", default="{}")
+    p_create_request.add_argument("--metadata-json", default="{}")
+
     p_step = sub.add_parser("run-task-step", help="执行单步")
     p_step.add_argument("--task-uid", required=True)
     p_step.add_argument("--graph-uid", required=True)
@@ -49,6 +66,40 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_show_task = sub.add_parser("show-task", help="查看任务")
     p_show_task.add_argument("--task-uid", required=True)
+
+    p_show_request = sub.add_parser("show-task-request", help="查看事务请求")
+    p_show_request.add_argument("--request-uid", required=True)
+
+    p_run_request = sub.add_parser("run-task-request", help="执行单个事务请求")
+    p_run_request.add_argument("--request-uid", required=True)
+    p_run_request.add_argument("--simulate", action="store_true", help="仅模拟执行，不真正调用事务")
+
+    p_list_requests = sub.add_parser("list-task-requests", help="查看事务请求列表")
+    p_list_requests.add_argument("--task-uid", default=None)
+    p_list_requests.add_argument("--status", default=None)
+
+    p_run_requests = sub.add_parser("run-task-requests", help="批量消费任务下待调度事务请求")
+    p_run_requests.add_argument("--task-uid", required=True)
+    p_run_requests.add_argument("--max-requests", type=int, default=100)
+    p_run_requests.add_argument("--simulate", action="store_true", help="仅模拟执行，不真正调用事务")
+
+    p_validate_project = sub.add_parser("validate-project-mainflow", help="校验项目主链是否可由 AOE 正式运行")
+    p_validate_project.add_argument("--project-config-path", required=True)
+    p_validate_project.add_argument("--start-node", default=None)
+    p_validate_project.add_argument("--end-node", default=None)
+
+    p_run_project = sub.add_parser("run-project-mainflow", help="由 AOE 正式运行项目主链片段")
+    p_run_project.add_argument("--project-config-path", required=True)
+    p_run_project.add_argument("--start-node", default=None)
+    p_run_project.add_argument("--end-node", default=None)
+    p_run_project.add_argument("--simulate", action="store_true", help="仅模拟执行，不真正调用事务")
+    p_run_project.add_argument("--source", default="项目经理")
+    p_run_project.add_argument("--decision-department-uid", default=默认决策部门UID)
+
+    p_show_departments = sub.add_parser("show-decision-departments", help="查看决策部门列表")
+
+    p_show_department_members = sub.add_parser("show-decision-department-members", help="查看决策部门成员")
+    p_show_department_members.add_argument("--department-uid", default=默认决策部门UID)
 
     p_show_decisions = sub.add_parser("show-decisions", help="查看任务决策")
     p_show_decisions.add_argument("--task-uid", required=True)
@@ -108,6 +159,27 @@ def run_cli(argv: list[str] | None = None) -> int:
         print(json.dumps(task, ensure_ascii=False, indent=2))
         return 0
 
+    if args.command == "create-task-request":
+        payload = json.loads(args.payload_json or "{}")
+        request_contract = json.loads(args.request_contract_json or "{}")
+        metadata = json.loads(args.metadata_json or "{}")
+        request = api.create_task_request(
+            request_type=args.request_type,
+            target_affair_uid=args.target_affair_uid,
+            payload=payload if isinstance(payload, dict) else {},
+            task_uid=args.task_uid,
+            source_object_type=args.source_object_type,
+            source_object_uid=args.source_object_uid,
+            node_code=args.node_code,
+            config_path=args.config_path,
+            priority_score=args.priority_score,
+            source=args.source,
+            request_contract=request_contract if isinstance(request_contract, dict) else {},
+            metadata=metadata if isinstance(metadata, dict) else {},
+        )
+        print(json.dumps(request, ensure_ascii=False, indent=2))
+        return 0
+
     if args.command == "run-task-step":
         result = api.run_task_step(task_uid=args.task_uid, graph_uid=args.graph_uid)
         print(json.dumps(_to_jsonable(result), ensure_ascii=False, indent=2, default=str))
@@ -126,6 +198,61 @@ def run_cli(argv: list[str] | None = None) -> int:
     if args.command == "show-task":
         task = task_store.get_task(args.task_uid)
         print(json.dumps(task, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "show-task-request":
+        request = api.get_task_request(args.request_uid)
+        print(json.dumps(request, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "run-task-request":
+        payload = api.run_task_request(args.request_uid, simulate=bool(args.simulate))
+        print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+        return 0
+
+    if args.command == "list-task-requests":
+        rows = api.list_task_requests(task_uid=args.task_uid, status=args.status)
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "run-task-requests":
+        payload = api.run_task_requests(
+            task_uid=args.task_uid,
+            max_requests=args.max_requests,
+            simulate=bool(args.simulate),
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+        return 0
+
+    if args.command == "validate-project-mainflow":
+        payload = api.validate_project_mainflow(
+            project_config_path=args.project_config_path,
+            start_node=args.start_node,
+            end_node=args.end_node,
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+        return 0 if bool(payload.get("ok")) else 2
+
+    if args.command == "run-project-mainflow":
+        payload = api.run_project_mainflow(
+            project_config_path=args.project_config_path,
+            start_node=args.start_node,
+            end_node=args.end_node,
+            simulate=bool(args.simulate),
+            source=args.source,
+            decision_department_uid=args.decision_department_uid,
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+        return 0 if str(payload.get("status") or "") in {"completed", "simulated"} else 2
+
+    if args.command == "show-decision-departments":
+        rows = api.list_decision_departments()
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "show-decision-department-members":
+        rows = api.list_decision_department_members(args.department_uid)
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "show-decisions":

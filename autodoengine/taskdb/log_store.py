@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 from uuid import uuid4
 
 from autodoengine.utils.time_utils import now_iso
@@ -24,47 +25,71 @@ def _connect() -> sqlite3.Connection:
 def _ensure_schema(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
-        CREATE TABLE IF NOT EXISTS log_events (
-            event_uid TEXT PRIMARY KEY,
-            event_type TEXT NOT NULL,
-            level TEXT,
-            handler_kind TEXT,
-            handler_name TEXT,
-            model_name TEXT,
-            skill_names_json TEXT,
-            agent_names_json TEXT,
-            read_files_json TEXT,
-            script_path TEXT,
-            third_party_tool TEXT,
-            reasoning_summary TEXT,
-            conversation_excerpt TEXT,
-            payload_json TEXT,
-            created_at TEXT NOT NULL
+        CREATE TABLE IF NOT EXISTS "运行事件" (
+            uid_事件 TEXT PRIMARY KEY,
+            "事件类型" TEXT NOT NULL,
+            "级别" TEXT,
+            "处理器类型" TEXT,
+            "处理器名称" TEXT,
+            "模型名称" TEXT,
+            "技能列表JSON" TEXT,
+            "智能体列表JSON" TEXT,
+            "读取文件列表JSON" TEXT,
+            "脚本路径" TEXT,
+            "第三方工具" TEXT,
+            "推理摘要" TEXT,
+            "对话摘录" TEXT,
+            "载荷JSON" TEXT,
+            "创建时间" TEXT NOT NULL
         )
         """
     )
+    for column_name, column_def in {
+        "级别": "TEXT",
+        "处理器类型": "TEXT",
+        "处理器名称": "TEXT",
+        "模型名称": "TEXT",
+        "技能列表JSON": "TEXT",
+        "智能体列表JSON": "TEXT",
+        "读取文件列表JSON": "TEXT",
+        "脚本路径": "TEXT",
+        "第三方工具": "TEXT",
+        "推理摘要": "TEXT",
+        "对话摘录": "TEXT",
+        "载荷JSON": "TEXT",
+        "创建时间": "TEXT NOT NULL DEFAULT ''",
+    }.items():
+        _ensure_column(connection, "运行事件", column_name, column_def)
     connection.commit()
+
+
+def _ensure_column(connection: sqlite3.Connection, table_name: str, column_name: str, column_def: str) -> None:
+    rows = connection.execute(f'PRAGMA table_info("{table_name}")').fetchall()
+    existing = {str(row[1]) for row in rows if len(row) > 1}
+    if column_name in existing:
+        return
+    connection.execute(f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {column_def}')
 
 
 def _append(event_type: str, payload: dict[str, object], level: str) -> None:
     record = {
-        "event_uid": f"event-{uuid4().hex[:12]}",
+        "uid_事件": f"event-{uuid4().hex[:12]}",
         "event_type": event_type,
         "level": level,
         "payload": payload,
         "created_at": now_iso(),
     }
-    with _connect() as connection:
+    with closing(_connect()) as connection, connection:
         connection.execute(
             """
-            INSERT OR REPLACE INTO log_events (
-                event_uid, event_type, level, handler_kind, handler_name, model_name,
-                skill_names_json, agent_names_json, read_files_json, script_path,
-                third_party_tool, reasoning_summary, conversation_excerpt, payload_json, created_at
+            INSERT OR REPLACE INTO "运行事件" (
+                uid_事件, "事件类型", "级别", "处理器类型", "处理器名称", "模型名称",
+                "技能列表JSON", "智能体列表JSON", "读取文件列表JSON", "脚本路径",
+                "第三方工具", "推理摘要", "对话摘录", "载荷JSON", "创建时间"
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                str(record["event_uid"]),
+                str(record["uid_事件"]),
                 str(record["event_type"]),
                 str(record["level"]),
                 "",
@@ -104,24 +129,25 @@ def append_blocked_event(event_type: str, payload: dict[str, object]) -> None:
 def list_runtime_events(task_uid: str | None = None) -> list[dict[str, object]]:
     """读取运行事件。"""
 
-    with _connect() as connection:
+    with closing(_connect()) as connection, connection:
         db_rows = connection.execute(
-            "SELECT event_uid, event_type, level, payload_json, created_at FROM log_events ORDER BY created_at"
+            'SELECT uid_事件, "事件类型", "级别", "载荷JSON", "创建时间" FROM "运行事件" ORDER BY "创建时间"'
         ).fetchall()
 
     rows: list[dict[str, object]] = []
     for db_row in db_rows:
-        payload_text = str(db_row["payload_json"] or "{}")
+        payload_text = str(db_row["载荷JSON"] or "{}")
         try:
             payload = json.loads(payload_text)
         except Exception:
             payload = {}
         item: dict[str, object] = {
-            "event_uid": str(db_row["event_uid"]),
-            "event_type": str(db_row["event_type"]),
-            "level": str(db_row["level"] or "info"),
+            "uid_事件": str(db_row["uid_事件"]),
+            "event_uid": str(db_row["uid_事件"]),
+            "event_type": str(db_row["事件类型"]),
+            "level": str(db_row["级别"] or "info"),
             "payload": payload,
-            "created_at": str(db_row["created_at"] or ""),
+            "created_at": str(db_row["创建时间"] or ""),
         }
         if task_uid is None or (isinstance(payload, dict) and payload.get("task_uid") == task_uid):
             rows.append(item)

@@ -8,6 +8,7 @@ from .bootstrap import (
     bootstrap_taskdb,
 )
 from .decision_store import append_decision, get_decision, list_node_decisions, list_task_decisions
+from .department_store import ensure_default_department, get_department, list_department_members, list_departments
 from .audit_views import (
     build_blocked_governance_view,
     build_decision_department_view,
@@ -23,6 +24,18 @@ from .graph_registry import (
 )
 from .log_store import append_blocked_event, append_error_event, append_runtime_event, list_runtime_events
 from .relation_store import create_task_relation, find_resume_candidates, list_children, list_parents
+from .request_store import (
+    create_request,
+    get_request,
+    list_requests,
+    list_task_requests,
+    mark_request_blocked,
+    mark_request_cancelled,
+    mark_request_completed,
+    mark_request_failed,
+    mark_request_running,
+    update_request_status,
+)
 from .snapshot_store import create_snapshot, get_snapshot, list_task_snapshots
 from .state_machine import apply_transition, can_complete_task, can_resume_task, can_split_task, validate_transition
 from .step_store import append_task_step, build_task_path, list_run_steps, list_task_steps
@@ -72,10 +85,24 @@ __all__ = [
     "build_task_full_chain_view",
     "build_decision_department_view",
     "build_blocked_governance_view",
+    "ensure_default_department",
+    "get_department",
+    "list_departments",
+    "list_department_members",
     "append_runtime_event",
     "append_error_event",
     "append_blocked_event",
     "list_runtime_events",
+    "create_request",
+    "get_request",
+    "list_requests",
+    "list_task_requests",
+    "update_request_status",
+    "mark_request_running",
+    "mark_request_completed",
+    "mark_request_blocked",
+    "mark_request_failed",
+    "mark_request_cancelled",
     "register_graph",
     "get_graph",
     "list_graphs",

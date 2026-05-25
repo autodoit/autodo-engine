@@ -44,7 +44,7 @@ def get_runtime_store_dirs(base_dir: str | Path | None = None) -> dict[str, Path
         "taskdb": database_root / "tasks",
         "logdb": database_root / "logs",
         "decisiondb": database_root / "decision",
-        "graph_registry": database_root / "runtime_registry",
+        "graph_registry": workspace_root / "config" / "runtime_registry",
     }
 
 

@@ -30,7 +30,10 @@ def build_task_full_chain_view(task_uid: str) -> dict[str, Any]:
     steps = list_task_steps(task_uid)
     decisions = list_task_decisions(task_uid)
     events = list_runtime_events(task_uid)
-    decision_map = {(item.get("decision") or {}).get("decision_uid"): item for item in decisions}
+    decision_map = {
+        (item.get("decision") or {}).get("uid_决策") or (item.get("decision") or {}).get("decision_uid"): item
+        for item in decisions
+    }
 
     chain: list[dict[str, Any]] = []
     for step in steps:
@@ -39,8 +42,11 @@ def build_task_full_chain_view(task_uid: str) -> dict[str, Any]:
         packet_payload = decision_row.get("packet") or {}
         chain.append(
             {
+                "uid_步骤": step.step_uid,
                 "step_uid": step.step_uid,
+                "uid_前节点": step.node_uid_before,
                 "node_uid_before": step.node_uid_before,
+                "uid_后节点": step.node_uid_after,
                 "node_uid_after": step.node_uid_after,
                 "task_status_before": step.task_status_before.value,
                 "task_status_after": step.task_status_after.value,
@@ -48,6 +54,7 @@ def build_task_full_chain_view(task_uid: str) -> dict[str, Any]:
                     str(item) for item in (packet_payload.get("candidate_actions") or [])
                 ],
                 "selected_action": decision_payload.get("selected_action", step.selected_action.value),
+                "uid_决策": step.decision_uid,
                 "decision_uid": step.decision_uid,
                 "observation_packet_ref": packet_payload.get("packet_uid"),
                 "evidence_refs": list(packet_payload.get("evidence") or []),
@@ -56,6 +63,7 @@ def build_task_full_chain_view(task_uid: str) -> dict[str, Any]:
         )
 
     return {
+        "uid_任务": task_uid,
         "task_uid": task_uid,
         "steps": chain,
         "events": events,
@@ -111,7 +119,9 @@ def build_decision_department_view(*, task_uid: str | None = None, decision_uid:
         )
 
     return {
+        "uid_任务": task_uid,
         "task_uid": task_uid,
+        "uid_决策": decision_uid,
         "decision_uid": decision_uid,
         "decisions": decisions,
         "decision_count": len(decisions),
@@ -184,6 +194,7 @@ def build_blocked_governance_view(task_uid: str | None = None) -> dict[str, Any]
         }
 
     return {
+        "uid_任务": task_uid,
         "task_uid": task_uid,
         "by_block_reason_code": normalized,
         "event_count": len(events),

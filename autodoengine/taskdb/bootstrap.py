@@ -31,7 +31,7 @@ def bootstrap_decisiondb(base_dir: str) -> None:
 def bootstrap_graph_registry(base_dir: str) -> None:
     """初始化 graph_registry 存储。"""
 
-    target = Path(base_dir).resolve() / "graph_registry"
+    target = get_runtime_store_dirs(base_dir)["graph_registry"]
     target.mkdir(parents=True, exist_ok=True)
 
 
