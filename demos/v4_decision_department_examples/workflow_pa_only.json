@@ -1,29 +1,31 @@
 {
-  "graph_uid": "graph-v4-decision-department-pa-only",
-  "graph_name": "v4 决策部门示例 - PA only",
-  "graph_version": "0.1.0",
-  "policies": {
+  "流程图唯一标识": "graph-v4-decision-department-pa-only",
+  "流程图名称": "v4 决策部门示例 - PA only",
+  "流程图版本": "0.1.0",
+  "策略": {
     "decision_department": {
-      "intervention_condition": "abnormal_upgrade",
-      "members": ["pa"],
-      "decision_mode": "PA-only"
+      "介入条件": "异常升级",
+      "members": [
+        "pa"
+      ],
+      "决策模式": "仅PA"
     }
   },
-  "nodes": [
+  "节点": [
     {
-      "node_uid": "node-start",
-      "node_type": "start",
-      "affair_uid": "affair-start",
-      "policies": {},
-      "enabled": true
+      "节点唯一标识": "node-start",
+      "节点类型": "开始",
+      "事务唯一标识": "affair-start",
+      "策略": {},
+      "是否启用": true
     },
     {
-      "node_uid": "node-decision",
-      "node_type": "process",
-      "affair_uid": "affair-decision",
+      "节点唯一标识": "node-decision",
+      "节点类型": "处理",
+      "事务唯一标识": "affair-decision",
       "risk_level": "normal",
-      "policies": {
-        "route_mode": "decision",
+      "策略": {
+        "路由模式": "决策",
         "simulate_receipt": {
           "result_code": "BLOCKED",
           "block_reason_code": "goal_ambiguous",
@@ -33,30 +35,30 @@
           "message": "目标不明确，交由PA裁决"
         }
       },
-      "enabled": true
+      "是否启用": true
     },
     {
-      "node_uid": "node-end",
-      "node_type": "end",
-      "affair_uid": "affair-end",
-      "policies": {
+      "节点唯一标识": "node-end",
+      "节点类型": "结束",
+      "事务唯一标识": "affair-end",
+      "策略": {
         "goal_satisfied_at_node": true
       },
-      "enabled": true
+      "是否启用": true
     }
   ],
-  "edges": [
+  "边": [
     {
-      "edge_uid": "edge-start-to-decision",
-      "from_node_uid": "node-start",
-      "to_node_uid": "node-decision",
-      "enabled": true
+      "边唯一标识": "edge-start-to-decision",
+      "起点节点唯一标识": "node-start",
+      "终点节点唯一标识": "node-decision",
+      "是否启用": true
     },
     {
-      "edge_uid": "edge-decision-to-end",
-      "from_node_uid": "node-decision",
-      "to_node_uid": "node-end",
-      "enabled": true
+      "边唯一标识": "edge-decision-to-end",
+      "起点节点唯一标识": "node-decision",
+      "终点节点唯一标识": "node-end",
+      "是否启用": true
     }
   ]
 }

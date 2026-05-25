@@ -105,6 +105,55 @@ class TestGraphLoader(unittest.TestCase):
         self.assertEqual(graph.graph_uid, "graph-file")
         self.assertEqual(graph.graph_name, "文件图")
 
+    def test_load_graph_from_dict_with_chinese_contract_success(self) -> None:
+        """测试图加载器可接受中文主契约。"""
+
+        graph = load_graph_from_dict(
+            {
+                "流程图唯一标识": "graph-zh",
+                "流程图名称": "中文主契约图",
+                "流程图版本": "0.1.0",
+                "策略": {
+                    "路由模式": "直达",
+                    "任务模式": "工作区轻账本",
+                    "决策部门": {
+                        "介入条件": "异常升级",
+                        "决策模式": "联合",
+                    },
+                },
+                "节点": [
+                    {
+                        "节点唯一标识": "node-start",
+                        "节点类型": "开始",
+                        "事务唯一标识": "affair-start",
+                        "是否启用": True,
+                    },
+                    {
+                        "节点唯一标识": "node-end",
+                        "节点类型": "结束",
+                        "事务唯一标识": "affair-end",
+                        "是否启用": True,
+                    },
+                ],
+                "边": [
+                    {
+                        "边唯一标识": "edge-start-end",
+                        "起点节点唯一标识": "node-start",
+                        "终点节点唯一标识": "node-end",
+                        "条件表达式": "always",
+                        "是否启用": True,
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(graph.graph_uid, "graph-zh")
+        self.assertEqual(graph.graph_name, "中文主契约图")
+        self.assertEqual(graph.nodes["node-start"].node_type, "start")
+        self.assertEqual(graph.nodes["node-end"].node_type, "end")
+        self.assertEqual(graph.policies["route_mode"], "direct")
+        self.assertEqual(graph.policies["task_mode"], "workspace_lite")
+
     def test_invalid_edge_should_raise(self) -> None:
         """测试边引用不存在节点时抛异常。"""
 

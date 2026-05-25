@@ -66,6 +66,49 @@ class TestEngineStandaloneMode(unittest.TestCase):
             self.assertTrue(outputs)
             self.assertTrue(Path(outputs[0]).exists())
 
+    def test_public_api_should_accept_chinese_keyword_arguments(self) -> None:
+        """AOE 公共 API 应支持中文关键字参数。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+
+            api.bootstrap_runtime(运行时根目录=str(workspace))
+
+            prepared = api.prepare_affair_config(
+                配置={"output_dir": "output/demo"},
+                工作区根路径=workspace,
+            )
+            self.assertTrue(Path(prepared["output_dir"]).is_absolute())
+
+            module = api.import_affair_module(
+                事务唯一标识="图节点_start",
+                工作区根路径=workspace,
+                严格模式=False,
+            )
+            self.assertTrue(hasattr(module, "execute"))
+
+            outputs = api.run_affair(
+                事务唯一标识="图节点_start",
+                配置={"output_dir": str(workspace / "output" / "demo")},
+                工作区根路径=workspace,
+                严格模式=False,
+            )
+            self.assertTrue(outputs)
+            self.assertTrue(Path(outputs[0]).exists())
+
+            summary = api.refresh_affair_registry(工作区根路径=workspace, 严格模式=False)
+            self.assertIn("stats", summary)
+
+            rows = api.list_runtime_affairs(工作区根路径=workspace, 严格模式=False)
+            self.assertIsInstance(rows, list)
+
+            conflicts = api.check_affair_conflicts(工作区根路径=workspace)
+            self.assertIn("errors", conflicts)
+
+            registry_paths = api.get_affair_registry_paths(工作区根路径=workspace)
+            self.assertIsInstance(registry_paths, dict)
+            self.assertTrue(registry_paths)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -173,6 +173,31 @@ class TestAffairManagement(unittest.TestCase):
         self.assertEqual(str(second.get("final_name")), "导入事务_v2")
         self.assertTrue(bool(second.get("renamed")))
 
+    def test_import_user_affair_should_accept_chinese_keyword_arguments(self) -> None:
+        """事务导入入口应支持中文关键字参数。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace = Path(temp_dir)
+            source_py = workspace / "demo_affair.py"
+            source_json = workspace / "demo_affair.json"
+            source_md = workspace / "demo_affair.md"
+
+            source_py.write_text("def execute(config_path, **kwargs):\n    return [config_path]\n", encoding="utf-8")
+            source_json.write_text(json.dumps({"x": 1}, ensure_ascii=False, indent=2), encoding="utf-8")
+            source_md.write_text("# demo\n", encoding="utf-8")
+
+            imported = import_user_affair(
+                源码文件路径=source_py,
+                参数模板路径=source_json,
+                说明文档路径=source_md,
+                事务名称="中文导入事务",
+                工作区根路径=workspace,
+                严格模式=False,
+            )
+            self.assertEqual(str(imported.get("final_name")), "中文导入事务")
+            self.assertEqual(str(imported.get("affair_uid")), "中文导入事务")
+            self.assertTrue(Path(str(imported.get("affair_dir"))).exists())
+
 
 if __name__ == "__main__":
     unittest.main()

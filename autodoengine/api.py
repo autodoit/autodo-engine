@@ -124,6 +124,29 @@ def _normalize_workspace_root(workspace_root: str | Path | None) -> Path:
     return resolve_portable_path(str(workspace_root), base_dir=Path.cwd())
 
 
+def _resolve_public_argument(*pairs: tuple[str, Any], required: bool = False) -> Any:
+    """解析公开 API 的中英文别名形参。"""
+
+    selected_name = ""
+    selected_value: Any = None
+    has_value = False
+
+    for name, value in pairs:
+        if value is None:
+            continue
+        if has_value and value != selected_value:
+            raise ValueError(f"{selected_name} 与 {name} 不能同时传入不同值")
+        if not has_value:
+            selected_name = name
+            selected_value = value
+            has_value = True
+
+    if required and not has_value:
+        names = " / ".join(name for name, _ in pairs)
+        raise ValueError(f"{names} 不能为空")
+    return selected_value
+
+
 def _normalize_affair_outputs(result: Any) -> List[Path]:
     """将事务返回结果归一化为路径列表。
 
@@ -221,7 +244,7 @@ def _load_module_from_file(source_py_path: str | Path) -> Any:
     return module
 
 
-def load_graph(file_path: str) -> Graph:
+def load_graph(文件路径: str | Path | None = None, *, file_path: str | Path | None = None) -> Graph:
     """公开的图加载入口。
 
     Args:
@@ -238,16 +261,21 @@ def load_graph(file_path: str) -> Graph:
         >>> graph = load_graph("demos/data/graph.json")
     """
 
-    target = resolve_portable_path(file_path, base_dir=Path.cwd())
+    target = resolve_portable_path(
+        _resolve_public_argument(("文件路径", 文件路径), ("file_path", file_path), required=True),
+        base_dir=Path.cwd(),
+    )
     if not target.exists():
         raise FileNotFoundError(f"图文件不存在：{target}")
     return load_graph_from_file(str(target))
 
 
-def bootstrap_runtime(base_dir: str) -> None:
+def bootstrap_runtime(运行时根目录: str | Path | None = None, *, base_dir: str | Path | None = None) -> None:
     """公开的运行时初始化入口。"""
 
-    bootstrap_runtime_storage(base_dir)
+    bootstrap_runtime_storage(
+        _resolve_public_argument(("运行时根目录", 运行时根目录), ("base_dir", base_dir), required=True)
+    )
 
 
 def register_graph(graph: Graph) -> None:
@@ -1006,7 +1034,13 @@ def get_blocked_governance_view(task_uid: str | None = None) -> Dict[str, Any]:
     return _build_blocked_governance_view(task_uid=task_uid)
 
 
-def refresh_affair_registry(workspace_root: str | None = None, strict: bool = False) -> Dict[str, Any]:
+def refresh_affair_registry(
+    工作区根路径: str | Path | None = None,
+    严格模式: bool | None = None,
+    *,
+    workspace_root: str | Path | None = None,
+    strict: bool = False,
+) -> Dict[str, Any]:
     """刷新事务数据库并返回同步摘要。
 
     Args:
@@ -1022,8 +1056,10 @@ def refresh_affair_registry(workspace_root: str | None = None, strict: bool = Fa
         True
     """
 
-    resolved_workspace = resolve_portable_path(workspace_root, base_dir=Path.cwd()) if workspace_root else None
-    result = sync_affair_databases(workspace_root=resolved_workspace, strict=strict)
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+    resolved_strict = bool(_resolve_public_argument(("严格模式", 严格模式), ("strict", strict)))
+    resolved_workspace = resolve_portable_path(resolved_workspace_root, base_dir=Path.cwd()) if resolved_workspace_root else None
+    result = sync_affair_databases(workspace_root=resolved_workspace, strict=resolved_strict)
     return {
         "schema_version": SCHEMA_VERSION,
         "aok_db_path": str(result.aok_db_path),
@@ -1035,7 +1071,13 @@ def refresh_affair_registry(workspace_root: str | None = None, strict: bool = Fa
     }
 
 
-def list_runtime_affairs(workspace_root: str | None = None, strict: bool = False) -> List[Dict[str, Any]]:
+def list_runtime_affairs(
+    工作区根路径: str | Path | None = None,
+    严格模式: bool | None = None,
+    *,
+    workspace_root: str | Path | None = None,
+    strict: bool = False,
+) -> List[Dict[str, Any]]:
     """列出运行时可用事务记录。
 
     Args:
@@ -1051,12 +1093,18 @@ def list_runtime_affairs(workspace_root: str | None = None, strict: bool = False
         True
     """
 
-    resolved_workspace = resolve_portable_path(workspace_root, base_dir=Path.cwd()) if workspace_root else None
-    registry = build_runtime_registry(workspace_root=resolved_workspace, strict=strict)
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+    resolved_strict = bool(_resolve_public_argument(("严格模式", 严格模式), ("strict", strict)))
+    resolved_workspace = resolve_portable_path(resolved_workspace_root, base_dir=Path.cwd()) if resolved_workspace_root else None
+    registry = build_runtime_registry(workspace_root=resolved_workspace, strict=resolved_strict)
     return [dict(item) for item in registry.values()]
 
 
-def check_affair_conflicts(workspace_root: str | None = None) -> Dict[str, Any]:
+def check_affair_conflicts(
+    工作区根路径: str | Path | None = None,
+    *,
+    workspace_root: str | Path | None = None,
+) -> Dict[str, Any]:
     """检查事务同步冲突与告警信息。
 
     Args:
@@ -1071,7 +1119,8 @@ def check_affair_conflicts(workspace_root: str | None = None) -> Dict[str, Any]:
         True
     """
 
-    resolved_workspace = resolve_portable_path(workspace_root, base_dir=Path.cwd()) if workspace_root else None
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+    resolved_workspace = resolve_portable_path(resolved_workspace_root, base_dir=Path.cwd()) if resolved_workspace_root else None
     result = sync_affair_databases(workspace_root=resolved_workspace, strict=False)
     return {
         "error_count": len(result.errors),
@@ -1111,7 +1160,11 @@ def get_runtime_store_paths(base_dir: str | Path | None = None) -> Dict[str, str
     }
 
 
-def get_affair_registry_paths(workspace_root: str | Path | None = None) -> Dict[str, str]:
+def get_affair_registry_paths(
+    工作区根路径: str | Path | None = None,
+    *,
+    workspace_root: str | Path | None = None,
+) -> Dict[str, str]:
     """返回事务管理系统相关路径。
 
     Args:
@@ -1121,7 +1174,8 @@ def get_affair_registry_paths(workspace_root: str | Path | None = None) -> Dict[
         路径字典。
     """
 
-    resolved_workspace = _normalize_workspace_root(workspace_root) if workspace_root is not None else None
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+    resolved_workspace = _normalize_workspace_root(resolved_workspace_root) if resolved_workspace_root is not None else None
     return {key: str(value) for key, value in _get_affair_registry_paths(resolved_workspace).items()}
 
 
@@ -1311,7 +1365,13 @@ def invoke_public_tool(
     )
 
 
-def prepare_affair_config(*, config: Dict[str, Any], workspace_root: str | Path) -> Dict[str, Any]:
+def prepare_affair_config(
+    *,
+    配置: Dict[str, Any] | None = None,
+    config: Dict[str, Any] | None = None,
+    工作区根路径: str | Path | None = None,
+    workspace_root: str | Path | None = None,
+) -> Dict[str, Any]:
     """预处理事务配置路径。
 
     Args:
@@ -1322,8 +1382,10 @@ def prepare_affair_config(*, config: Dict[str, Any], workspace_root: str | Path)
         路径已绝对化后的配置字典。
     """
 
-    workspace = _normalize_workspace_root(workspace_root)
-    normalized = dict(config or {})
+    resolved_config = _resolve_public_argument(("配置", 配置), ("config", config), required=True)
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root), required=True)
+    workspace = _normalize_workspace_root(resolved_workspace_root)
+    normalized = dict(resolved_config or {})
     normalized.setdefault("_workspace_root", str(workspace))
 
     try:
@@ -1347,7 +1409,15 @@ def prepare_affair_config(*, config: Dict[str, Any], workspace_root: str | Path)
     return resolved
 
 
-def import_affair_module(affair_uid: str, *, workspace_root: str | Path | None = None, strict: bool = False) -> Any:
+def import_affair_module(
+    事务唯一标识: str | None = None,
+    *,
+    affair_uid: str | None = None,
+    工作区根路径: str | Path | None = None,
+    workspace_root: str | Path | None = None,
+    严格模式: bool | None = None,
+    strict: bool = False,
+) -> Any:
     """按事务 UID 导入事务模块。
 
     Args:
@@ -1359,25 +1429,37 @@ def import_affair_module(affair_uid: str, *, workspace_root: str | Path | None =
         已导入的 Python 模块对象。
     """
 
-    workspace = _normalize_workspace_root(workspace_root)
-    registry = build_registry(strict=strict, workspace_root=workspace)
-    runner = resolve_runner(affair_uid, registry)
+    resolved_affair_uid = str(
+        _resolve_public_argument(("事务唯一标识", 事务唯一标识), ("affair_uid", affair_uid), required=True)
+        or ""
+    ).strip()
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+    resolved_strict = bool(_resolve_public_argument(("严格模式", 严格模式), ("strict", strict)))
+    workspace = _normalize_workspace_root(resolved_workspace_root)
+    registry = build_registry(strict=resolved_strict, workspace_root=workspace)
+    runner = resolve_runner(resolved_affair_uid, registry)
     module_name = str(runner.get("module") or "").strip()
     source_py_path = str(runner.get("source_py_path") or "").strip()
     if module_name:
         return importlib.import_module(module_name)
     if source_py_path:
         return _load_module_from_file(source_py_path)
-    raise ValueError(f"事务[{affair_uid}] 缺少可导入入口（runner.module/source_py_path）")
+    raise ValueError(f"事务[{resolved_affair_uid}] 缺少可导入入口（runner.module/source_py_path）")
 
 
 def import_user_affair(
     *,
-    source_py_path: str | Path,
-    workspace_root: str | Path,
+    源码文件路径: str | Path | None = None,
+    source_py_path: str | Path | None = None,
+    工作区根路径: str | Path | None = None,
+    workspace_root: str | Path | None = None,
+    参数模板路径: str | Path | None = None,
     source_params_json_path: str | Path | None = None,
+    说明文档路径: str | Path | None = None,
     source_doc_md_path: str | Path | None = None,
+    事务名称: str | None = None,
     affair_name: str | None = None,
+    严格模式: bool | None = None,
     strict: bool = False,
 ) -> Dict[str, Any]:
     """导入用户功能程序为事务三件套并注册到事务管理系统。
@@ -1394,22 +1476,28 @@ def import_user_affair(
         导入摘要字典。
     """
 
-    workspace = _normalize_workspace_root(workspace_root)
+    resolved_source_py_path = _resolve_public_argument(("源码文件路径", 源码文件路径), ("source_py_path", source_py_path), required=True)
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root), required=True)
+    resolved_source_params_json_path = _resolve_public_argument(("参数模板路径", 参数模板路径), ("source_params_json_path", source_params_json_path))
+    resolved_source_doc_md_path = _resolve_public_argument(("说明文档路径", 说明文档路径), ("source_doc_md_path", source_doc_md_path))
+    resolved_affair_name = _resolve_public_argument(("事务名称", 事务名称), ("affair_name", affair_name))
+    resolved_strict = bool(_resolve_public_argument(("严格模式", 严格模式), ("strict", strict)))
+    workspace = _normalize_workspace_root(resolved_workspace_root)
     result = _import_user_affair(
         workspace_root=workspace,
-        source_py_path=resolve_portable_path(str(source_py_path), base_dir=workspace),
+        source_py_path=resolve_portable_path(str(resolved_source_py_path), base_dir=workspace),
         source_params_json_path=(
-            resolve_portable_path(str(source_params_json_path), base_dir=workspace)
-            if source_params_json_path is not None
+            resolve_portable_path(str(resolved_source_params_json_path), base_dir=workspace)
+            if resolved_source_params_json_path is not None
             else None
         ),
         source_doc_md_path=(
-            resolve_portable_path(str(source_doc_md_path), base_dir=workspace)
-            if source_doc_md_path is not None
+            resolve_portable_path(str(resolved_source_doc_md_path), base_dir=workspace)
+            if resolved_source_doc_md_path is not None
             else None
         ),
-        affair_name=affair_name,
-        strict=strict,
+        affair_name=resolved_affair_name,
+        strict=resolved_strict,
     )
 
     return {
@@ -1427,12 +1515,18 @@ def import_user_affair(
 
 
 def run_affair(
-    affair_uid: str,
+    事务唯一标识: str | None = None,
     *,
+    affair_uid: str | None = None,
+    配置: Dict[str, Any] | None = None,
     config: Dict[str, Any] | None = None,
+    配置路径: str | Path | None = None,
     config_path: str | Path | None = None,
+    工作区根路径: str | Path | None = None,
     workspace_root: str | Path | None = None,
+    严格模式: bool | None = None,
     strict: bool = False,
+    运行器参数: Dict[str, Any] | None = None,
     runner_kwargs: Dict[str, Any] | None = None,
 ) -> List[Path]:
     """统一事务直调入口（强制经由事务管理系统）。
@@ -1453,12 +1547,21 @@ def run_affair(
         KeyError: 事务不存在时抛出。
     """
 
-    uid = str(affair_uid or "").strip()
+    uid = str(
+        _resolve_public_argument(("事务唯一标识", 事务唯一标识), ("affair_uid", affair_uid), required=True)
+        or ""
+    ).strip()
     if not uid:
         raise ValueError("affair_uid 不能为空")
 
-    workspace = _normalize_workspace_root(workspace_root)
-    registry = build_registry(strict=strict, workspace_root=workspace)
+    resolved_config = _resolve_public_argument(("配置", 配置), ("config", config))
+    resolved_config_path = _resolve_public_argument(("配置路径", 配置路径), ("config_path", config_path))
+    resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+    resolved_strict = bool(_resolve_public_argument(("严格模式", 严格模式), ("strict", strict)))
+    resolved_runner_kwargs = _resolve_public_argument(("运行器参数", 运行器参数), ("runner_kwargs", runner_kwargs))
+
+    workspace = _normalize_workspace_root(resolved_workspace_root)
+    registry = build_registry(strict=resolved_strict, workspace_root=workspace)
     runner = resolve_runner(uid, registry)
 
     module_name = str(runner.get("module") or "").strip()
@@ -1474,46 +1577,46 @@ def run_affair(
     merged_kwargs: Dict[str, Any] = {}
     if isinstance(runner.get("kwargs"), dict):
         merged_kwargs.update(dict(runner.get("kwargs") or {}))
-    if isinstance(runner_kwargs, dict):
-        merged_kwargs.update(runner_kwargs)
+    if isinstance(resolved_runner_kwargs, dict):
+        merged_kwargs.update(resolved_runner_kwargs)
 
     pass_mode = str(runner["pass_mode"])
 
     if pass_mode == "config_dict":
         config_dict: Dict[str, Any]
-        if config is not None:
-            config_dict = dict(config)
-        elif config_path is not None:
-            path_obj = resolve_portable_path(str(config_path), base_dir=workspace)
+        if resolved_config is not None:
+            config_dict = dict(resolved_config)
+        elif resolved_config_path is not None:
+            path_obj = resolve_portable_path(str(resolved_config_path), base_dir=workspace)
             config_dict = load_json_or_py(path_obj)
         else:
             config_dict = {}
 
-        final_config = prepare_affair_config(config=config_dict, workspace_root=workspace)
-        if config_path is not None:
-            resolved_config_path = resolve_portable_path(str(config_path), base_dir=workspace)
+        final_config = prepare_affair_config(配置=config_dict, 工作区根路径=workspace)
+        if resolved_config_path is not None:
+            resolved_config_path_obj = resolve_portable_path(str(resolved_config_path), base_dir=workspace)
         else:
             with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:
                 json.dump(final_config, fp, ensure_ascii=False, indent=2)
-                resolved_config_path = Path(fp.name)
+                resolved_config_path_obj = Path(fp.name)
 
         try:
-            with _runtime_context_scope(workspace_root=workspace, affair_uid=uid, config_path=resolved_config_path):
+            with _runtime_context_scope(workspace_root=workspace, affair_uid=uid, config_path=resolved_config_path_obj):
                 result = callable_obj(final_config, **merged_kwargs)
         finally:
-            if config_path is None and resolved_config_path.exists():
-                resolved_config_path.unlink(missing_ok=True)
+            if resolved_config_path is None and resolved_config_path_obj.exists():
+                resolved_config_path_obj.unlink(missing_ok=True)
         return _normalize_affair_outputs(result)
 
     if pass_mode == "config_path":
-        if config_path is not None:
-            raw_config_path = resolve_portable_path(str(config_path), base_dir=workspace)
+        if resolved_config_path is not None:
+            raw_config_path = resolve_portable_path(str(resolved_config_path), base_dir=workspace)
             raw_config = load_json_or_py(raw_config_path)
-            final_config = prepare_affair_config(config=raw_config, workspace_root=workspace)
-        elif config is not None:
-            final_config = prepare_affair_config(config=dict(config), workspace_root=workspace)
+            final_config = prepare_affair_config(配置=raw_config, 工作区根路径=workspace)
+        elif resolved_config is not None:
+            final_config = prepare_affair_config(配置=dict(resolved_config), 工作区根路径=workspace)
         else:
-            final_config = prepare_affair_config(config={}, workspace_root=workspace)
+            final_config = prepare_affair_config(配置={}, 工作区根路径=workspace)
 
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fp:
             json.dump(final_config, fp, ensure_ascii=False, indent=2)

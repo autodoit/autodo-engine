@@ -20,6 +20,29 @@ from typing import Any, Dict, List
 from autodoengine.utils.path_tools import load_json_or_py
 
 
+def _resolve_public_argument(*pairs: tuple[str, Any], required: bool = False) -> Any:
+    """解析模板事务公开入口的中英文别名形参。"""
+
+    selected_name = ""
+    selected_value: Any = None
+    has_value = False
+
+    for name, value in pairs:
+        if value is None:
+            continue
+        if has_value and value != selected_value:
+            raise ValueError(f"{selected_name} 与 {name} 不能同时传入不同值")
+        if not has_value:
+            selected_name = name
+            selected_value = value
+            has_value = True
+
+    if required and not has_value:
+        names = " / ".join(name for name, _ in pairs)
+        raise ValueError(f"{names} 不能为空")
+    return selected_value
+
+
 class TemplateAffairBase(ABC):
     """模板事务基类。
 
@@ -42,7 +65,12 @@ class TemplateAffairBase(ABC):
 
         self.affair_name = str(affair_name).strip() or self.__class__.__name__
 
-    def load_config(self, config_path: Path | str) -> Dict[str, Any]:
+    def load_config(
+        self,
+        配置路径: Path | str | None = None,
+        *,
+        config_path: Path | str | None = None,
+    ) -> Dict[str, Any]:
         """读取事务配置。
 
         Args:
@@ -52,12 +80,20 @@ class TemplateAffairBase(ABC):
             配置字典。若配置不是字典，则返回空字典。
         """
 
-        data = load_json_or_py(Path(config_path))
+        resolved_config_path = _resolve_public_argument(("配置路径", 配置路径), ("config_path", config_path), required=True)
+        data = load_json_or_py(Path(resolved_config_path))
         if not isinstance(data, dict):
             return {}
         return data
 
-    def pre_check_can_start(self, *, config: Dict[str, Any], workspace_root: Path | None) -> None:
+    def pre_check_can_start(
+        self,
+        *,
+        配置: Dict[str, Any] | None = None,
+        config: Dict[str, Any] | None = None,
+        工作区根路径: Path | None = None,
+        workspace_root: Path | None = None,
+    ) -> None:
         """前置可开始检查钩子。
 
         Args:
@@ -71,10 +107,20 @@ class TemplateAffairBase(ABC):
             RuntimeError: 子类可在不满足启动条件时抛出。
         """
 
+        _ = _resolve_public_argument(("配置", 配置), ("config", config), required=True)
+        _ = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+
         return None
 
     @abstractmethod
-    def run_business(self, *, config: Dict[str, Any], workspace_root: Path | None) -> List[Path]:
+    def run_business(
+        self,
+        *,
+        配置: Dict[str, Any] | None = None,
+        config: Dict[str, Any] | None = None,
+        工作区根路径: Path | None = None,
+        workspace_root: Path | None = None,
+    ) -> List[Path]:
         """执行核心业务逻辑。
 
         Args:
@@ -88,7 +134,9 @@ class TemplateAffairBase(ABC):
     def post_check_completed(
         self,
         *,
+        配置: Dict[str, Any] | None = None,
         config: Dict[str, Any],
+        工作区根路径: Path | None = None,
         workspace_root: Path | None,
         outputs: List[Path],
     ) -> None:
@@ -106,12 +154,17 @@ class TemplateAffairBase(ABC):
             RuntimeError: 子类可在完成性不满足时抛出。
         """
 
+        _ = _resolve_public_argument(("配置", 配置), ("config", config), required=True)
+        _ = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+
         return None
 
     def post_check_healthy(
         self,
         *,
+        配置: Dict[str, Any] | None = None,
         config: Dict[str, Any],
+        工作区根路径: Path | None = None,
         workspace_root: Path | None,
         outputs: List[Path],
         error: Exception | None,
@@ -128,9 +181,19 @@ class TemplateAffairBase(ABC):
             None。
         """
 
+        _ = _resolve_public_argument(("配置", 配置), ("config", config), required=True)
+        _ = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+
         return None
 
-    def execute(self, config_path: Path | str, workspace_root: Path | None = None) -> List[Path]:
+    def execute(
+        self,
+        配置路径: Path | str | None = None,
+        工作区根路径: Path | None = None,
+        *,
+        config_path: Path | str | None = None,
+        workspace_root: Path | None = None,
+    ) -> List[Path]:
         """模板事务标准执行入口。
 
         Args:
@@ -150,16 +213,19 @@ class TemplateAffairBase(ABC):
             >>> DemoAffair(affair_name="demo").execute("demo.json")  # doctest: +SKIP
         """
 
-        config = self.load_config(config_path)
-        self.pre_check_can_start(config=config, workspace_root=workspace_root)
+        resolved_config_path = _resolve_public_argument(("配置路径", 配置路径), ("config_path", config_path), required=True)
+        resolved_workspace_root = _resolve_public_argument(("工作区根路径", 工作区根路径), ("workspace_root", workspace_root))
+
+        config = self.load_config(配置路径=resolved_config_path)
+        self.pre_check_can_start(config=config, workspace_root=resolved_workspace_root)
 
         outputs: List[Path] = []
         run_error: Exception | None = None
         try:
-            outputs = self.run_business(config=config, workspace_root=workspace_root)
+            outputs = self.run_business(config=config, workspace_root=resolved_workspace_root)
             self.post_check_completed(
                 config=config,
-                workspace_root=workspace_root,
+                workspace_root=resolved_workspace_root,
                 outputs=outputs,
             )
             return outputs
@@ -169,7 +235,7 @@ class TemplateAffairBase(ABC):
         finally:
             self.post_check_healthy(
                 config=config,
-                workspace_root=workspace_root,
+                workspace_root=resolved_workspace_root,
                 outputs=outputs,
                 error=run_error,
             )

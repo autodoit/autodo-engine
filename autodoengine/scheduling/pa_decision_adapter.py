@@ -8,6 +8,63 @@ from typing import Any
 from autodoengine.core.enums import DecisionType, TaskAction, TaskStatus
 from autodoengine.core.errors import ReceiptProtocolError
 from autodoengine.core.types import DecisionPacket, DecisionResult
+from autodoengine.utils.config_contract_utils import normalize_to_legacy_contract
+
+
+_PA_ACTION_TO_TASK_ACTION = {
+    "pass_next": TaskAction.CONTINUE,
+    "retry_current": TaskAction.RETRY,
+    "pause_current": TaskAction.SUSPEND,
+    "fallback_current": TaskAction.BACKTRACK,
+    "stop": TaskAction.CANCEL,
+}
+
+
+def _normalize_selected_action(raw_value: Any, default_action: TaskAction) -> TaskAction:
+    normalized = normalize_to_legacy_contract({"decision": raw_value or default_action.value})
+    if isinstance(normalized, dict):
+        text = str(normalized.get("decision") or default_action.value).strip()
+    else:
+        text = str(raw_value or default_action.value).strip()
+
+    mapped_action = _PA_ACTION_TO_TASK_ACTION.get(text)
+    if mapped_action is not None:
+        return mapped_action
+    return TaskAction.normalize(text)
+
+
+def _normalize_decision_mode(raw_value: Any, default_mode: str) -> str:
+    normalized = normalize_to_legacy_contract({"decision_mode": raw_value or default_mode})
+    if isinstance(normalized, dict):
+        text = str(normalized.get("decision_mode") or default_mode).strip()
+    else:
+        text = str(raw_value or default_mode).strip()
+
+    aliases = {
+        "joint": "JOINT",
+        "pa-only": "PA-only",
+        "human-only": "HUMAN-only",
+    }
+    return aliases.get(text.lower(), default_mode)
+
+
+def _normalize_decision_members(raw_value: Any, default_members: list[str]) -> list[str]:
+    source = list(raw_value or default_members or ["pa", "human"])
+    aliases = {
+        "人工": "human",
+        "仅人工": "human",
+        "仅pa": "pa",
+    }
+    normalized: list[str] = []
+    for item in source:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        lowered = text.lower()
+        member = aliases.get(text, aliases.get(lowered, lowered))
+        if member not in normalized:
+            normalized.append(member)
+    return normalized or list(default_members or ["pa", "human"])
 
 
 def request_pa_decision(
@@ -77,9 +134,9 @@ def normalize_decision_result(
     }
 
     recommended_action = packet.recommended_action or TaskAction.FAIL
-    selected_from_raw = TaskAction(str(raw_result.get("selected_action") or recommended_action.value))
-    decision_members = list(raw_result.get("decision_members") or packet.decision_members or ["pa", "human"])
-    decision_mode = str(raw_result.get("decision_mode") or packet.decision_mode or "JOINT")
+    selected_from_raw = _normalize_selected_action(raw_result.get("selected_action"), recommended_action)
+    decision_members = _normalize_decision_members(raw_result.get("decision_members"), list(packet.decision_members or ["pa", "human"]))
+    decision_mode = _normalize_decision_mode(raw_result.get("decision_mode"), str(packet.decision_mode or "JOINT"))
 
     return DecisionResult(
         decision_uid=f"decision-{uuid4().hex[:12]}",

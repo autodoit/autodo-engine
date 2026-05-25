@@ -6,12 +6,46 @@ from typing import Any
 
 from autodoengine.core.enums import ResultCode
 from autodoengine.core.types import NodeContext
+from autodoengine.utils.config_contract_utils import normalize_to_legacy_contract
 
 _DEFAULT_CONDITION = "abnormal_upgrade"
 _DEFAULT_MEMBERS = ["pa", "human"]
 _VALID_CONDITIONS = {"abnormal_upgrade", "always"}
 _VALID_MEMBERS = {"pa", "human", "ta", "na", "aa"}
 _VALID_ROUTE_MODES = {"direct", "decision"}
+
+_CONDITION_ALIASES = {
+    "gate_or_abnormal": "abnormal_upgrade",
+    "闸门或异常升级": "abnormal_upgrade",
+    "异常升级": "abnormal_upgrade",
+    "总是": "always",
+}
+_MEMBER_ALIASES = {
+    "人工": "human",
+}
+_ROUTE_MODE_ALIASES = {
+    "直达": "direct",
+    "决策": "decision",
+}
+
+
+def _normalize_enum_value(key: str, value: Any, default: str = "") -> str:
+    normalized = normalize_to_legacy_contract({key: value})
+    if isinstance(normalized, dict):
+        text = str(normalized.get(key) or "").strip()
+        if text:
+            return text
+    return str(default or "").strip()
+
+
+def _normalize_decision_mode(raw_value: Any) -> str:
+    value = _normalize_enum_value("decision_mode", raw_value, default="JOINT")
+    aliases = {
+        "joint": "JOINT",
+        "pa-only": "PA-only",
+        "human-only": "HUMAN-only",
+    }
+    return aliases.get(value.strip().lower(), "JOINT")
 
 
 def _normalize_condition(raw_value: Any) -> str:
@@ -32,6 +66,7 @@ def _normalize_condition(raw_value: Any) -> str:
     """
 
     value = str(raw_value or _DEFAULT_CONDITION).strip().lower()
+    value = _CONDITION_ALIASES.get(value, value)
     if value not in _VALID_CONDITIONS:
         return _DEFAULT_CONDITION
     return value
@@ -64,6 +99,7 @@ def _normalize_members(raw_value: Any) -> list[str]:
     normalized: list[str] = []
     for item in source:
         member = str(item or "").strip().lower()
+        member = _MEMBER_ALIASES.get(member, member)
         if member in _VALID_MEMBERS and member not in normalized:
             normalized.append(member)
 
@@ -115,7 +151,8 @@ def resolve_decision_framework(*, graph_policies: dict[str, Any], node_context: 
     """
 
     route_mode_raw = node_context.policies.get("route_mode") or node_context.policies.get("routing_mode")
-    route_mode = str(route_mode_raw or "direct").strip().lower()
+    route_mode = _normalize_enum_value("route_mode", route_mode_raw, default="direct").strip().lower()
+    route_mode = _ROUTE_MODE_ALIASES.get(route_mode, route_mode)
     if route_mode not in _VALID_ROUTE_MODES:
         route_mode = "direct"
 
@@ -139,7 +176,7 @@ def resolve_decision_framework(*, graph_policies: dict[str, Any], node_context: 
         "route_mode": route_mode,
         "intervention_condition": condition,
         "members": members,
-        "decision_mode": str(node_rule.get("decision_mode") or graph_rule.get("decision_mode") or "JOINT").upper(),
+        "decision_mode": _normalize_decision_mode(node_rule.get("decision_mode") or graph_rule.get("decision_mode") or "JOINT"),
     }
 
 

@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from autodoengine.utils.config_contract_utils import normalize_to_legacy_contract
+
 from .graph_validator import validate_graph
 from .models import Graph, GraphContainer, GraphEdge, GraphNode
 
@@ -32,7 +34,7 @@ def load_graph(graph_data: dict[str, Any]) -> Graph:
 def load_graph_from_file(file_path: str) -> Graph:
     """从 JSON 文件载入静态图。"""
 
-    data = json.loads(Path(file_path).read_text(encoding="utf-8"))
+    data = normalize_to_legacy_contract(json.loads(Path(file_path).read_text(encoding="utf-8")))
     if not isinstance(data, dict):
         raise ValueError("图文件根对象必须是 JSON 对象")
     return load_graph_from_dict(data)
@@ -40,6 +42,8 @@ def load_graph_from_file(file_path: str) -> Graph:
 
 def load_graph_from_dict(data: dict[str, Any]) -> Graph:
     """从 Python 字典对象构建静态图。"""
+
+    data = normalize_to_legacy_contract(data)
 
     nodes_payload = data.get("nodes") or {}
     edges_payload = data.get("edges") or []

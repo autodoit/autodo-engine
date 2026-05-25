@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from autodoengine.utils.config_contract_utils import normalize_to_legacy_contract
+
 
 _WINDOWS_ABS_PATTERN = re.compile(r"^[A-Za-z]:[\\/]")
 
@@ -127,7 +129,7 @@ def load_json_or_py(config_path: Path) -> Dict[str, Any]:
     suffix = config_path.suffix.lower()
     if suffix == ".json":
         text = config_path.read_text(encoding="utf-8-sig")
-        return json.loads(text) if text.strip() else {}
+        return normalize_to_legacy_contract(json.loads(text)) if text.strip() else {}
     if suffix == ".py":
         module_name = f"config_{config_path.stem}"
         spec = importlib.util.spec_from_file_location(module_name, config_path)
@@ -137,7 +139,7 @@ def load_json_or_py(config_path: Path) -> Dict[str, Any]:
         spec.loader.exec_module(module)
         if not hasattr(module, "CONFIG"):
             raise ValueError("Python 配置文件需包含 CONFIG 字典")
-        return getattr(module, "CONFIG")
+        return normalize_to_legacy_contract(getattr(module, "CONFIG"))
     raise ValueError("配置文件必须为 .json 或 .py")
 
 
@@ -182,7 +184,7 @@ def resolve_path_from_base(raw: str, *, base_dir: Path) -> Path:
 def resolve_config_paths(cfg: dict, config_path: Path, workspace_root: Path | None = None) -> dict:
     """解析配置文件中的路径字段。"""
 
-    cfg = dict(cfg)
+    cfg = normalize_to_legacy_contract(dict(cfg))
 
     config_path = resolve_portable_path(str(config_path), base_dir=Path.cwd())
     config_dir = config_path.parent
@@ -248,6 +250,7 @@ def resolve_paths_to_absolute(
     if workspace_root is None:
         raise ValueError("workspace_root 不能为空")
     workspace_root = resolve_portable_path(str(workspace_root), base_dir=Path.cwd())
+    cfg = normalize_to_legacy_contract(dict(cfg))
 
     default_keys = {
         "output_dir",
@@ -313,6 +316,7 @@ def resolve_paths_to_absolute_with_audit(
     if workspace_root is None:
         raise ValueError("workspace_root 不能为空")
     workspace_root = resolve_portable_path(str(workspace_root), base_dir=Path.cwd())
+    cfg = normalize_to_legacy_contract(dict(cfg))
 
     default_keys = {
         "output_dir",
