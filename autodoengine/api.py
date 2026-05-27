@@ -29,18 +29,29 @@ from autodoengine.taskdb.department_store import (
     list_departments as _list_departments,
 )
 from autodoengine.taskdb.request_store import (
+    acquire_request_lease as _acquire_request_lease,
     create_request as _create_request,
     get_request as _get_request,
+    list_schedulable_requests as _list_schedulable_requests,
     list_requests as _list_requests,
     list_task_requests as _list_task_requests,
+    mark_request_committed as _mark_request_committed,
     mark_request_blocked as _mark_request_blocked,
     mark_request_completed as _mark_request_completed,
     mark_request_failed as _mark_request_failed,
+    mark_request_ready_for_commit as _mark_request_ready_for_commit,
     mark_request_running as _mark_request_running,
+    release_request_lease as _release_request_lease,
+    renew_request_lease as _renew_request_lease,
+    upsert_executor_heartbeat as _upsert_executor_heartbeat,
     请求状态_已完成,
     请求状态_已失败,
     请求状态_已阻断,
+    请求状态_待租约,
     请求状态_待调度,
+    请求状态_已租约,
+    请求状态_待提交,
+    请求状态_已提交,
 )
 from autodoengine.taskdb import (
     build_blocked_governance_view as _build_blocked_governance_view,
@@ -308,6 +319,10 @@ def create_task_request(
     source: str = "任务系统",
     request_contract: dict[str, Any] | None = None,
     metadata: dict[str, Any] | None = None,
+    resource_fingerprint: str = "",
+    idempotency_key: str = "",
+    expected_version: str = "",
+    snapshot_token: str = "",
 ) -> Dict[str, Any]:
     """创建事务请求。"""
 
@@ -324,6 +339,10 @@ def create_task_request(
         source=source,
         request_contract=request_contract,
         metadata=metadata,
+        resource_fingerprint=resource_fingerprint,
+        idempotency_key=idempotency_key,
+        expected_version=expected_version,
+        snapshot_token=snapshot_token,
     )
 
 
@@ -430,6 +449,92 @@ def list_task_requests(task_uid: str | None = None, status: str | None = None) -
     if task_uid:
         return _list_task_requests(task_uid)
     return _list_requests(status=status)
+
+
+def list_schedulable_task_requests(
+    *,
+    limit: int = 20,
+    statuses: list[str] | None = None,
+    scheduling_policy: dict[str, Any] | None = None,
+    executor_uid: str = "",
+) -> List[Dict[str, Any]]:
+    """列出可调度事务请求。"""
+
+    return _list_schedulable_requests(
+        limit=limit,
+        statuses=statuses,
+        scheduling_policy=scheduling_policy,
+        executor_uid=executor_uid,
+    )
+
+
+def acquire_task_request_lease(
+    *,
+    executor_uid: str,
+    request_uid: str | None = None,
+    lease_seconds: int = 120,
+    resource_fingerprint: str = "",
+    access_mode: str = "写",
+    statuses: list[str] | None = None,
+    scheduling_policy: dict[str, Any] | None = None,
+) -> Dict[str, Any] | None:
+    """为执行者领取事务请求租约。"""
+
+    return _acquire_request_lease(
+        executor_uid=executor_uid,
+        request_uid=request_uid,
+        lease_seconds=lease_seconds,
+        resource_fingerprint=resource_fingerprint,
+        access_mode=access_mode,
+        statuses=statuses,
+        scheduling_policy=scheduling_policy,
+    )
+
+
+def renew_task_request_lease(*, request_uid: str, executor_uid: str, lease_seconds: int = 120) -> bool:
+    """续租事务请求。"""
+
+    return _renew_request_lease(
+        request_uid=request_uid,
+        executor_uid=executor_uid,
+        lease_seconds=lease_seconds,
+    )
+
+
+def release_task_request_lease(
+    *,
+    request_uid: str,
+    executor_uid: str,
+    lease_status: str = "已释放",
+    heartbeat_status: str = "空闲",
+) -> bool:
+    """释放事务请求租约。"""
+
+    return _release_request_lease(
+        request_uid=request_uid,
+        executor_uid=executor_uid,
+        lease_status=lease_status,
+        heartbeat_status=heartbeat_status,
+    )
+
+
+def upsert_task_request_executor_heartbeat(
+    *,
+    executor_uid: str,
+    executor_type: str = "agent",
+    current_request_uid: str = "",
+    status: str = "空闲",
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """更新事务请求执行者心跳。"""
+
+    _upsert_executor_heartbeat(
+        executor_uid=executor_uid,
+        executor_type=executor_type,
+        current_request_uid=current_request_uid,
+        status=status,
+        metadata=metadata,
+    )
 
 
 def _load_json_mapping(file_path: Path) -> dict[str, Any]:
@@ -676,7 +781,14 @@ def _run_project_registered_affair(
     return _normalize_affair_outputs(result)
 
 
-def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, Any]:
+def run_task_request(
+    request_uid: str,
+    *,
+    simulate: bool = False,
+    executor_uid: str = "aoe-default-executor",
+    lease_seconds: int = 120,
+    scheduling_policy: dict[str, Any] | None = None,
+) -> Dict[str, Any]:
     """执行单个事务请求并回写请求/任务状态。"""
 
     request = get_task_request(request_uid)
@@ -713,6 +825,41 @@ def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, A
         task_store.update_task_status(task_uid, TaskStatus.RUNNING)
         task_store.update_task_cursor(task_uid, current_node_uid=node_code, current_affair_uid=target_affair_uid)
 
+    normalized_executor_uid = str(executor_uid or "aoe-default-executor").strip() or "aoe-default-executor"
+    lease_bundle = acquire_task_request_lease(
+        executor_uid=normalized_executor_uid,
+        request_uid=request_uid,
+        lease_seconds=lease_seconds,
+        resource_fingerprint=f"请求:{request_uid}",
+        statuses=[请求状态_待调度, 请求状态_待租约, 请求状态_已租约],
+        scheduling_policy=scheduling_policy,
+    )
+    if lease_bundle is None:
+        refreshed = get_task_request(request_uid)
+        owner = str(refreshed.get("executor_uid") or "")
+        expire_at = str(refreshed.get("lease_expire_at") or "")
+        result = {
+            "mode": "execute",
+            "status": "lease_unavailable",
+            "task_uid": task_uid,
+            "request_uid": request_uid,
+            "node_code": node_code,
+            "affair_uid": target_affair_uid,
+            "executor_uid": normalized_executor_uid,
+            "owner_executor_uid": owner,
+            "lease_expire_at": expire_at,
+        }
+        log_store.append_blocked_event("事务请求租约冲突", result)
+        return result
+
+    _upsert_executor_heartbeat(
+        executor_uid=normalized_executor_uid,
+        executor_type="agent",
+        current_request_uid=request_uid,
+        status="忙碌",
+        metadata={"stage": "执行中"},
+    )
+
     _mark_request_running(request_uid)
     log_store.append_runtime_event(
         "事务请求开始",
@@ -721,6 +868,7 @@ def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, A
             "request_uid": request_uid,
             "node_code": node_code,
             "affair_uid": target_affair_uid,
+            "executor_uid": normalized_executor_uid,
             "simulate": bool(simulate),
         },
     )
@@ -732,10 +880,19 @@ def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, A
             "request_uid": request_uid,
             "node_code": node_code,
             "affair_uid": target_affair_uid,
+            "executor_uid": normalized_executor_uid,
             "output_count": 0,
             "outputs": [],
         }
+        _mark_request_ready_for_commit(request_uid, result=result)
+        _mark_request_committed(request_uid, result=result)
         _mark_request_completed(request_uid, result=result)
+        release_task_request_lease(
+            request_uid=request_uid,
+            executor_uid=normalized_executor_uid,
+            lease_status="已完成",
+            heartbeat_status="空闲",
+        )
         log_store.append_runtime_event("事务请求完成", result)
         return {
             "status": "simulated",
@@ -768,6 +925,7 @@ def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, A
             "request_uid": request_uid,
             "node_code": node_code,
             "affair_uid": target_affair_uid,
+            "executor_uid": normalized_executor_uid,
             "error_type": type(exc).__name__,
             "error_message": str(exc),
             "traceback": traceback.format_exc(limit=8),
@@ -775,6 +933,12 @@ def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, A
         _mark_request_failed(request_uid, result=result)
         if task_uid:
             task_store.mark_task_failed(task_uid)
+        release_task_request_lease(
+            request_uid=request_uid,
+            executor_uid=normalized_executor_uid,
+            lease_status="已失败",
+            heartbeat_status="阻断",
+        )
         log_store.append_error_event("事务请求失败", result)
         return {
             "status": "failed",
@@ -787,10 +951,19 @@ def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, A
         "request_uid": request_uid,
         "node_code": node_code,
         "affair_uid": target_affair_uid,
+        "executor_uid": normalized_executor_uid,
         "output_count": len(outputs),
         "outputs": [str(item) for item in outputs],
     }
+    _mark_request_ready_for_commit(request_uid, result=result)
+    _mark_request_committed(request_uid, result=result)
     _mark_request_completed(request_uid, result=result)
+    release_task_request_lease(
+        request_uid=request_uid,
+        executor_uid=normalized_executor_uid,
+        lease_status="已完成",
+        heartbeat_status="空闲",
+    )
     log_store.append_runtime_event("事务请求完成", result)
     return {
         "status": "completed",
@@ -798,15 +971,33 @@ def run_task_request(request_uid: str, *, simulate: bool = False) -> Dict[str, A
     }
 
 
-def run_task_requests(task_uid: str, *, max_requests: int = 100, simulate: bool = False) -> List[Dict[str, Any]]:
+def run_task_requests(
+    task_uid: str,
+    *,
+    max_requests: int = 100,
+    simulate: bool = False,
+    executor_uid: str = "aoe-default-executor",
+    lease_seconds: int = 120,
+    scheduling_policy: dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
     """消费任务下待调度的事务请求。"""
 
-    requests = [item for item in list_task_requests(task_uid=task_uid) if str(item.get("status") or "") == 请求状态_待调度]
+    requests = [
+        item
+        for item in list_task_requests(task_uid=task_uid)
+        if str(item.get("status") or "") in {请求状态_待调度, 请求状态_待租约, 请求状态_已租约}
+    ]
     results: list[dict[str, Any]] = []
     for request in requests[: max(0, int(max_requests)) or 0]:
-        result = run_task_request(str(request.get("request_uid") or ""), simulate=simulate)
+        result = run_task_request(
+            str(request.get("request_uid") or ""),
+            simulate=simulate,
+            executor_uid=executor_uid,
+            lease_seconds=lease_seconds,
+            scheduling_policy=scheduling_policy,
+        )
         results.append(result)
-        if result.get("status") not in {"completed", "simulated"}:
+        if result.get("status") not in {"completed", "simulated", "lease_unavailable"}:
             break
 
     if not results:
@@ -821,6 +1012,65 @@ def run_task_requests(task_uid: str, *, max_requests: int = 100, simulate: bool 
     elif 请求状态_已阻断 in statuses:
         task_store.update_task_status(task_uid, TaskStatus.BLOCKED)
     return results
+
+
+def run_scheduler_cycle(
+    *,
+    max_requests: int = 20,
+    simulate: bool = False,
+    executor_uid: str = "aoe-default-executor",
+    lease_seconds: int = 120,
+    statuses: list[str] | None = None,
+    scheduling_policy: dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    """按全局可调度队列执行一轮调度。
+
+    Args:
+        max_requests: 最多消费请求数。
+        simulate: 是否仅模拟执行。
+        executor_uid: 执行者 UID。
+        lease_seconds: 租约秒数。
+        statuses: 候选状态集合。
+        scheduling_policy: 调度评分策略。
+
+    Returns:
+        本轮调度执行结果列表。
+    """
+
+    limit = max(0, int(max_requests or 0))
+    if limit <= 0:
+        return []
+
+    normalized_statuses = statuses or [请求状态_待调度, 请求状态_待租约, 请求状态_已租约]
+    events: list[dict[str, Any]] = []
+
+    for _ in range(limit):
+        candidates = list_schedulable_task_requests(
+            limit=1,
+            statuses=normalized_statuses,
+            scheduling_policy=scheduling_policy,
+            executor_uid=executor_uid,
+        )
+        if not candidates:
+            break
+
+        request_uid = str(candidates[0].get("request_uid") or "")
+        if not request_uid:
+            break
+
+        result = run_task_request(
+            request_uid,
+            simulate=simulate,
+            executor_uid=executor_uid,
+            lease_seconds=lease_seconds,
+            scheduling_policy=scheduling_policy,
+        )
+        events.append(result)
+
+        if str(result.get("status") or "") not in {"completed", "simulated", "lease_unavailable"}:
+            break
+
+    return events
 
 
 def run_project_mainflow(

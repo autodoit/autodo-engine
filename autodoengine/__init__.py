@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .api import (
+    acquire_task_request_lease,
     bootstrap_runtime,
     check_affair_conflicts,
     create_task_request,
@@ -20,7 +21,11 @@ from .api import (
     list_capabilities,
     list_decision_department_members,
     list_decision_departments,
+    list_schedulable_task_requests,
     run_project_mainflow,
+    run_scheduler_cycle,
+    release_task_request_lease,
+    renew_task_request_lease,
     run_task_request,
     run_task_requests,
     list_task_requests,
@@ -34,12 +39,14 @@ from .api import (
     run_task_step,
     run_task_until_terminal,
     run_task_until_wait,
+    upsert_task_request_executor_heartbeat,
     validate_project_mainflow,
 )
 
 __all__ = [
     "load_graph",
     "bootstrap_runtime",
+    "acquire_task_request_lease",
     "refresh_affair_registry",
     "list_runtime_affairs",
     "check_affair_conflicts",
@@ -48,13 +55,18 @@ __all__ = [
     "get_runtime_store_paths",
     "get_affair_registry_paths",
     "get_task_request",
+    "list_schedulable_task_requests",
     "list_task_requests",
+    "renew_task_request_lease",
+    "release_task_request_lease",
+    "upsert_task_request_executor_heartbeat",
     "get_decision_department",
     "list_decision_departments",
     "list_decision_department_members",
     "validate_project_mainflow",
     "run_task_request",
     "run_task_requests",
+    "run_scheduler_cycle",
     "run_project_mainflow",
     "list_tools",
     "list_capabilities",

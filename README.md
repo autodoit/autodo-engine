@@ -10,19 +10,19 @@ AOE 主链的 workflow 资产与 runtime 留痕统一放在 `workflows/workflow_
 
 仅安装 engine（独立模式）：
 
-```powershell
+```bash
 uv pip install -e .
 ```
 
 如果需要使用 Playwright 浏览器自动化，还要补装 Chromium 运行时：
 
-```powershell
+```bash
 uv run playwright install chromium
 ```
 
 可选安装 autodo-kit（增强模式）：
 
-```powershell
+```bash
 uv pip install -e ../autodo-kit
 ```
 
@@ -76,13 +76,13 @@ autodoengine/tools/
 
 初始化运行时：
 
-```powershell
+```bash
 python -m autodoengine.main init-runtime --base-dir ./.tmp/runtime
 ```
 
 执行流程：
 
-```powershell
+```bash
 python -m autodoengine.main run-task --task-uid <task_uid> --graph-uid <graph_uid> --max-steps 50
 ```
 
@@ -102,14 +102,14 @@ print(outputs)
 
 独立模式最小事务检查：
 
-```powershell
+```bash
 python -m autodoengine.main refresh-affair-registry
 python -m autodoengine.main list-runtime-affairs
 ```
 
 统一 capability 调用：
 
-```powershell
+```bash
 python -m autodoengine.main list-capabilities
 python -m autodoengine.main invoke-capability --capability-id affair_refresh --payload-json '{"workspace_root":"."}'
 python -m autodoengine.main lint-capabilities
@@ -131,6 +131,6 @@ print(result)
 
 Runner 参数文件调用：
 
-```powershell
+```bash
 python scripts/invoke_capability.py path/to/params.json
 ```

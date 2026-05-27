@@ -2,7 +2,7 @@
 
 运行方式（仓库根目录）：
 
-```powershell
+```bash
 python -m autodoengine.examples.flow_graph_compile_example
 ```
 """

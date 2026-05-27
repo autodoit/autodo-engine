@@ -17,6 +17,97 @@ from autodoengine.taskdb.storage_paths import get_runtime_store_files
 class TestTaskdbRequestAndDepartmentStore(unittest.TestCase):
     """验证新任务网络存储对象。"""
 
+    def test_request_lease_should_be_exclusive_and_recover_after_release(self) -> None:
+        """同一请求租约应保持独占，释放后可再次领取。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime_root = Path(temp_dir) / "runtime"
+            api.bootstrap_runtime(str(runtime_root))
+
+            request = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A010_项目初始化",
+                node_code="A010",
+                config_path=str(runtime_root / "workspace" / "config" / "affairs_config" / "A010.json"),
+            )
+
+            first = api.acquire_task_request_lease(
+                executor_uid="agent-1",
+                request_uid=str(request["request_uid"]),
+                lease_seconds=120,
+            )
+            second = api.acquire_task_request_lease(
+                executor_uid="agent-2",
+                request_uid=str(request["request_uid"]),
+                lease_seconds=120,
+            )
+
+            released = api.release_task_request_lease(
+                request_uid=str(request["request_uid"]),
+                executor_uid="agent-1",
+                lease_status="已释放",
+                heartbeat_status="空闲",
+            )
+            third = api.acquire_task_request_lease(
+                executor_uid="agent-2",
+                request_uid=str(request["request_uid"]),
+                lease_seconds=120,
+                statuses=["待调度", "待租约", "已租约"],
+            )
+
+            refreshed = api.get_task_request(str(request["request_uid"]))
+
+        self.assertIsNotNone(first)
+        self.assertIsNone(second)
+        self.assertEqual(released, True)
+        self.assertIsNotNone(third)
+        self.assertEqual(refreshed["executor_uid"], "agent-2")
+        self.assertEqual(refreshed["status"], "已租约")
+
+    def test_request_lease_should_allow_expired_takeover(self) -> None:
+        """租约过期后应允许其他执行者接管。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime_root = Path(temp_dir) / "runtime"
+            api.bootstrap_runtime(str(runtime_root))
+
+            request = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A020_文献导入与预处理",
+                node_code="A020",
+                config_path=str(runtime_root / "workspace" / "config" / "affairs_config" / "A020.json"),
+            )
+
+            first = api.acquire_task_request_lease(
+                executor_uid="agent-1",
+                request_uid=str(request["request_uid"]),
+                lease_seconds=120,
+            )
+            self.assertIsNotNone(first)
+
+            files = get_runtime_store_files()
+            with closing(sqlite3.connect(str(files["tasks_db"]))) as connection, connection:
+                connection.execute(
+                    'UPDATE "资源租约" SET "过期时间"=?, "更新时间"=? WHERE uid_请求=?',
+                    ("2000-01-01T00:00:00+00:00", "2000-01-01T00:00:00+00:00", str(request["request_uid"])),
+                )
+                connection.execute(
+                    'UPDATE "事务请求" SET "租约过期时间"=?, "更新时间"=? WHERE uid_请求=?',
+                    ("2000-01-01T00:00:00+00:00", "2000-01-01T00:00:00+00:00", str(request["request_uid"])),
+                )
+
+            second = api.acquire_task_request_lease(
+                executor_uid="agent-2",
+                request_uid=str(request["request_uid"]),
+                lease_seconds=120,
+                statuses=["待调度", "待租约", "已租约"],
+            )
+            refreshed = api.get_task_request(str(request["request_uid"]))
+
+        self.assertIsNotNone(second)
+        self.assertEqual(refreshed["executor_uid"], "agent-2")
+        self.assertEqual(refreshed["status"], "已租约")
+
     def test_run_task_request_can_consume_pending_request(self) -> None:
         """应能正式消费待调度事务请求并回写结果。"""
 
@@ -281,6 +372,107 @@ class TestTaskdbRequestAndDepartmentStore(unittest.TestCase):
         self.assertIn("workspace", request["config_path"])
         self.assertEqual(request["request_contract"]["primary_transport"], "文献流程状态")
 
+    def test_schedulable_requests_should_support_age_boost_policy(self) -> None:
+        """调度排序应支持年龄加权，避免老请求饥饿。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime_root = Path(temp_dir) / "runtime"
+            workspace_root = runtime_root / "workspace"
+            config_dir = workspace_root / "config" / "affairs_config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            config_path = config_dir / "A010.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            api.bootstrap_runtime(str(workspace_root))
+
+            older = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A010_项目初始化",
+                node_code="A010",
+                config_path=str(config_path),
+                priority_score=1.0,
+            )
+            newer = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A010_项目初始化",
+                node_code="A010",
+                config_path=str(config_path),
+                priority_score=99.0,
+            )
+
+            files = get_runtime_store_files()
+            with closing(sqlite3.connect(str(files["tasks_db"]))) as connection, connection:
+                connection.execute(
+                    'UPDATE "事务请求" SET "创建时间"=?, "更新时间"=? WHERE uid_请求=?',
+                    ("2000-01-01T00:00:00+00:00", "2000-01-01T00:00:00+00:00", str(older["request_uid"])),
+                )
+
+            rows = api.list_schedulable_task_requests(
+                limit=2,
+                scheduling_policy={
+                    "weights": {
+                        "priority": 0.05,
+                        "age": 0.90,
+                        "retry_penalty": 0.03,
+                        "source_penalty": 0.02,
+                    },
+                    "age_cap_minutes": 30,
+                },
+            )
+
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(str(rows[0]["request_uid"]), str(older["request_uid"]))
+        self.assertIn("schedule_score", rows[0])
+        self.assertIn("schedule_breakdown", rows[0])
+        self.assertNotEqual(str(rows[1]["request_uid"]), str(older["request_uid"]))
+        self.assertEqual(str(rows[1]["request_uid"]), str(newer["request_uid"]))
+
+    def test_run_scheduler_cycle_should_execute_global_pending_requests(self) -> None:
+        """全局调度循环应能消费待调度请求。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_root = Path(temp_dir) / "workspace"
+            config_dir = workspace_root / "config" / "affairs_config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            config_path = config_dir / "A010.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            api.bootstrap_runtime(str(workspace_root))
+
+            request = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A010_项目初始化",
+                node_code="A010",
+                config_path=str(config_path),
+                payload={"workspace_root": str(workspace_root)},
+            )
+
+            original_run_affair = api.run_affair
+
+            def _fake_run_affair(
+                affair_uid: str,
+                *,
+                config_path: str | Path | None = None,
+                workspace_root: str | Path | None = None,
+                config: dict | None = None,
+            ):
+                self.assertEqual(affair_uid, "ar_A010_项目初始化")
+                self.assertTrue(Path(str(config_path)).exists())
+                self.assertEqual(Path(str(workspace_root)).resolve(), expected_workspace.resolve())
+                return [expected_workspace / "workspace" / "artifacts" / "ok.txt"]
+
+            expected_workspace = workspace_root
+            api.run_affair = _fake_run_affair
+            try:
+                events = api.run_scheduler_cycle(max_requests=1)
+            finally:
+                api.run_affair = original_run_affair
+
+            refreshed = api.get_task_request(str(request["request_uid"]))
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(str(events[0].get("status") or ""), "completed")
+        self.assertEqual(str(refreshed.get("status") or ""), "已完成")
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,10 +10,10 @@ autodo-engine 的公开 API 位于 `autodoengine.api`，并由包入口 `autodoe
 当前与 A055 预处理节点相关的边界约束：
 
 1. AOE 负责固定主链与单节点主链执行，不负责承接 A055 四个 mode 配置的 direct-affair 语义。
-2. `workspace/config/affairs_config/A055.json` 仍属于 AOE / PA 的正式单节点配置；其当前默认运行口径为 `local_dispatch_remote + remote_processing.enabled=true + use_tmux=false + allow_local_fallback=false`。
-3. `A055.mode.local_only.minimal.json`、`A055.mode.local_dispatch_remote.minimal.json`、`A055.mode.remote_only_tmux.minimal.json`、`A055.mode.record_parse_results.minimal.json` 属于 AOK official affair 的直跑配置，并且都按单条 smoke 口径维护。
-4. 如果调用方已经明确选择上述任一 mode 配置，则应绕过 AOE，直接调用 AOK 官方 `affair.execute(Path(config))`；AOE 不负责为这些 mode 配置补第二层单节点主链包装。
-5. 只有当调用方显式要求“仍通过 PA 编排”时，才允许把这些 mode 配置重新包进 `run_project_mainflow(...)` 的单节点调用里。
+2. `workspace/config/affairs_config/A055.json` 仍属于 AOE / PA 的正式单节点配置；`A055.mode.*.minimal.json` 属于 AOK official affair 的直跑配置。
+3. 如果调用方已经明确选择 `A055.mode.local_only.minimal.json`、`A055.mode.local_dispatch_remote.minimal.json`、`A055.mode.remote_only_tmux.minimal.json`、`A055.mode.record_parse_results.minimal.json`，则应绕过 AOE，直接调用 AOK 官方 `affair.execute(Path(config))`。
+4. 只有当调用方显式要求“仍通过 PA 编排”时，才允许把这些 mode 配置重新包进 `run_project_mainflow(...)` 的单节点调用里。
+5. 当 AOE 需要从 `content.db` 读取解析结果摘要时，应优先读取 `文献主表.解析状态` 或其在 `文献流程状态总视图` / `事务编号关联总视图` 中投影出来的 `解析状态`；`当前解析状态` 仍属于 parse asset 层的低层状态。
 
 ## 1. 运行时与任务 API
 
@@ -81,7 +81,7 @@ SQLite 物理层会把这些状态、动作、关系类型持久化为中文值�
 
 ## 2. 事务请求 API
 
-### 2.1 create_task_request(request_type, target_affair_uid, payload=None, task_uid=None, source_object_type="", source_object_uid="", node_code="", config_path="", priority_score=0.0, source="任务系统", request_contract=None, metadata=None)
+### 2.1 create_task_request(request_type, target_affair_uid, payload=None, task_uid=None, source_object_type="", source_object_uid="", node_code="", config_path="", priority_score=0.0, source="任务系统", request_contract=None, metadata=None, resource_fingerprint="", idempotency_key="", expected_version="", snapshot_token="")
 
 创建事务请求对象，并写入 `事务请求` 表。
 
@@ -98,11 +98,16 @@ SQLite 物理层会把这些状态、动作、关系类型持久化为中文值�
 9. `request_contract`
 10. `status`
 11. `请求状态`
-12. `priority_score`
-13. `payload`
-14. `metadata`
-15. `created_at`
-16. `updated_at`
+12. `调度状态`
+13. `priority_score`
+14. `payload`
+15. `metadata`
+16. `executor_uid`
+17. `resource_fingerprint`
+18. `lease_expire_at`
+19. `commit_status`
+20. `created_at`
+21. `updated_at`
 
 这组桥接字段用于承接项目经理已经解析好的节点上下文，使项目仓库可以把 `node_inputs`、`node_contracts`、来源对象与 `config_path` 正式挂进 AOE 请求账本。
 
@@ -129,15 +134,72 @@ SQLite 物理层会把这些状态、动作、关系类型持久化为中文值�
 - 传入 `task_uid` 时，返回该任务下的请求列表。
 - 不传 `task_uid` 时，返回全局请求列表，可选按 `status` 过滤。
 
-### 2.4 当前调度边界
+### 2.5 list_schedulable_task_requests(limit=20, statuses=None)
 
-当前版本已经支持事务请求的正式登记、查询与状态回写，但尚未把事务请求自动纳入 `run_task_step(...)` / `run_task_until_wait(...)` / `run_task_until_terminal(...)` 的统一候选调度循环。
+列出可调度请求（默认读取 `待调度`、`待租约`），并自动跳过仍被有效租约占用的请求。
 
-因此：
+### 2.6 acquire_task_request_lease(executor_uid, request_uid=None, lease_seconds=120, resource_fingerprint="", access_mode="写", statuses=None)
 
-1. 事务请求已经是正式 SQLite 对象。
-2. 调用方已经可以通过公开 API 和 CLI 对其进行读写，并写入项目级桥接字段。
-3. “请求自动进入主循环统一排序并执行”仍属于后续阶段能力。
+领取事务请求租约。
+
+行为要点：
+
+1. 同一请求同一时刻只允许一个有效租约。
+2. 若请求已有有效租约且执行者不同，领取失败。
+3. 若请求租约已过期，系统会自动回收并允许重新领取。
+
+### 2.7 renew_task_request_lease(request_uid, executor_uid, lease_seconds=120)
+
+续租已有请求租约，并刷新请求侧 `租约过期时间`。
+
+### 2.8 release_task_request_lease(request_uid, executor_uid, lease_status="已释放", heartbeat_status="空闲")
+
+释放请求租约并更新执行者心跳状态。
+
+### 2.9 upsert_task_request_executor_heartbeat(executor_uid, executor_type="agent", current_request_uid="", status="空闲", metadata=None)
+
+更新执行者心跳。
+
+### 2.10 run_task_request(request_uid, simulate=False, executor_uid="aoe-default-executor", lease_seconds=120)
+
+执行单个事务请求并回写请求/任务状态。
+
+当前执行链路：
+
+1. 领取租约。
+2. 标记执行中。
+3. 执行事务。
+4. 推进到待提交与已提交。
+5. 推进到已完成（或失败）。
+6. 释放租约。
+
+### 2.11 run_task_requests(task_uid, max_requests=100, simulate=False, executor_uid="aoe-default-executor", lease_seconds=120)
+
+按任务批量消费事务请求，并在批次结束后回写任务状态。
+
+### 2.12 请求状态口径
+
+事务请求当前支持以下状态值：
+
+1. `待调度`
+2. `待租约`
+3. `已租约`
+4. `执行中`
+5. `待提交`
+6. `已提交`
+7. `已完成`
+8. `已阻断`
+9. `已失败`
+10. `已取消`
+
+### 2.13 当前调度边界
+
+当前版本已完成事务请求协调调度的最小闭环：请求登记、可调度列表、租约领取、续租释放、执行者心跳、执行推进与提交收口。
+
+当前仍保留的边界：
+
+1. `run_task_step(...)` / `run_task_until_wait(...)` / `run_task_until_terminal(...)` 仍以任务节点推进为主，尚未直接把事务请求队列并入其候选排序。
+2. 决策部门目前仍以治理配置与审计底座为主，尚未在每轮请求调度中自动外发人类/LLM 执行链。
 
 ## 3. 决策部门治理 API
 

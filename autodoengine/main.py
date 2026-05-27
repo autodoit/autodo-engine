@@ -83,6 +83,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_run_requests.add_argument("--max-requests", type=int, default=100)
     p_run_requests.add_argument("--simulate", action="store_true", help="仅模拟执行，不真正调用事务")
 
+    p_run_scheduler_cycle = sub.add_parser("run-scheduler-cycle", help="执行一轮全局请求调度")
+    p_run_scheduler_cycle.add_argument("--max-requests", type=int, default=20)
+    p_run_scheduler_cycle.add_argument("--simulate", action="store_true", help="仅模拟执行，不真正调用事务")
+    p_run_scheduler_cycle.add_argument("--executor-uid", default="aoe-default-executor")
+    p_run_scheduler_cycle.add_argument("--lease-seconds", type=int, default=120)
+    p_run_scheduler_cycle.add_argument("--statuses-json", default="[]")
+    p_run_scheduler_cycle.add_argument("--scheduling-policy-json", default="{}")
+
     p_validate_project = sub.add_parser("validate-project-mainflow", help="校验项目主链是否可由 AOE 正式运行")
     p_validate_project.add_argument("--project-config-path", required=True)
     p_validate_project.add_argument("--start-node", default=None)
@@ -220,6 +228,20 @@ def run_cli(argv: list[str] | None = None) -> int:
             task_uid=args.task_uid,
             max_requests=args.max_requests,
             simulate=bool(args.simulate),
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+        return 0
+
+    if args.command == "run-scheduler-cycle":
+        statuses = json.loads(args.statuses_json or "[]")
+        scheduling_policy = json.loads(args.scheduling_policy_json or "{}")
+        payload = api.run_scheduler_cycle(
+            max_requests=args.max_requests,
+            simulate=bool(args.simulate),
+            executor_uid=args.executor_uid,
+            lease_seconds=args.lease_seconds,
+            statuses=statuses if isinstance(statuses, list) else None,
+            scheduling_policy=scheduling_policy if isinstance(scheduling_policy, dict) else None,
         )
         print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
         return 0
