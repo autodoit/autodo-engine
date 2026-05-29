@@ -79,6 +79,46 @@ autodo-engine 的公开 API 位于 `autodoengine.api`，并由包入口 `autodoe
 
 SQLite 物理层会把这些状态、动作、关系类型持久化为中文值；API 结果返回英文归一化语义字段，并在必要时补充中文字段。
 
+### 1.9 validate_project_mainflow(project_config_path, start_node=None, end_node=None)
+
+校验项目主链切片是否可由 AOE 正式运行。
+
+返回摘要包括：
+
+1. `ok`
+2. `target_nodes`
+3. `records`
+4. `workspace_root`
+5. `project_config_path`
+
+该接口只做主链切片与注册表校验，不执行事务。
+
+### 1.10 run_project_mainflow(project_config_path, start_node=None, end_node=None, simulate=False, source="项目经理", decision_department_uid="dept-default", task_management_mode="simple", ea_auto_audit_mode="auto", ea_auto_audit_policy=None, ea_auto_audit_fail_action=None, ea_auto_audit_model=None)
+
+根据项目级 `config.json` 生成事务请求并执行主链片段。
+
+当前正式语义：
+
+1. 每个节点会先生成标准事务请求，再执行官方 affair。
+2. 当节点返回 `blocked` 时，可按运行时配置触发 EA 自动审计。
+3. EA 自动审计默认通过阿里百炼模型输出 `continue`、`fail`、`blocked` 三类动作。
+4. 裁决结果会同时写入 `decision.db` 与请求/任务状态。
+5. `task_management_mode` 默认 `simple`；可切换 `complex`（实验）以保留复杂任务管理逻辑入口。
+6. 这一条路径里的 EA 是主程序内的程序性裁决角色，不要求以对话式 agent 形式直接暴露给用户。
+7. 该入口中的 EA 当前主要处理 blocked 节点裁决，不等价于“每一轮候选调度都由 EA 统一排序”。
+
+### 1.11 run_aoe_control_loop(max_cycles=1, max_requests_per_cycle=20, simulate=False, executor_uid="aoe-default-executor", lease_seconds=120, statuses=None, scheduling_policy=None, stop_when_idle=False, max_idle_cycles=3, idle_sleep_seconds=1.0)
+
+执行多拍 AOE 控制循环，用于显式消费 `tasks.db` 中待调度事务请求。
+
+当前正式语义：
+
+1. 它面向“请求队列持续消费”，不是项目主链切片执行器。
+2. 每拍会按租约与调度策略消费待调度请求，这里的“每拍”更接近扫描时间步。
+3. 它默认只消费 `tasks.db` 中已经存在的请求，不负责直接扫描业务数据库并生成新请求。
+4. 如果项目仓需要 `content.db` 或其他业务库驱动的闭环，应在项目级 runner 中把“状态扫描 -> EA 裁决 -> 请求物化”放在每拍前半段，再调用 scheduler 消费。
+5. 当 `stop_when_idle=true` 时，可在持续空闲达到阈值后提前停止。
+
 ## 2. 事务请求 API
 
 ### 2.1 create_task_request(request_type, target_affair_uid, payload=None, task_uid=None, source_object_type="", source_object_uid="", node_code="", config_path="", priority_score=0.0, source="任务系统", request_contract=None, metadata=None, resource_fingerprint="", idempotency_key="", expected_version="", snapshot_token="")
@@ -199,7 +239,7 @@ SQLite 物理层会把这些状态、动作、关系类型持久化为中文值�
 当前仍保留的边界：
 
 1. `run_task_step(...)` / `run_task_until_wait(...)` / `run_task_until_terminal(...)` 仍以任务节点推进为主，尚未直接把事务请求队列并入其候选排序。
-2. 决策部门目前仍以治理配置与审计底座为主，尚未在每轮请求调度中自动外发人类/LLM 执行链。
+2. 决策部门目前仍以治理配置与审计底座为主；AOE 已在 `run_project_mainflow(...)` 的 blocked 路径上接入 EA 自动审计，而项目级 runner 也可以在逻辑时间步中显式调用 EA 做候选排序，但这还不是引擎层默认常驻的统一策略。
 
 ## 3. 决策部门治理 API
 
@@ -364,16 +404,22 @@ SQLite 物理层会把这些状态、动作、关系类型持久化为中文值�
 6. `run-task`
 7. `show-task`
 8. `show-task-request`
-9. `list-task-requests`
-10. `show-decision-departments`
-11. `show-decision-department-members`
-12. `show-decisions`
-13. `show-runtime-events`
-14. `refresh-affair-registry`
-15. `list-runtime-affairs`
-16. `check-affair-conflicts`
-17. `show-runtime-store-paths`
-18. `show-affair-registry-paths`
-19. `list-capabilities`
-20. `invoke-capability`
-21. `lint-capabilities`
+9. `run-task-request`
+10. `list-task-requests`
+11. `run-task-requests`
+12. `run-scheduler-cycle`
+13. `run-aoe-control-loop`
+14. `validate-project-mainflow`
+15. `run-project-mainflow`
+16. `show-decision-departments`
+17. `show-decision-department-members`
+18. `show-decisions`
+19. `show-runtime-events`
+20. `refresh-affair-registry`
+21. `list-runtime-affairs`
+22. `check-affair-conflicts`
+23. `show-runtime-store-paths`
+24. `show-affair-registry-paths`
+25. `list-capabilities`
+26. `invoke-capability`
+27. `lint-capabilities`

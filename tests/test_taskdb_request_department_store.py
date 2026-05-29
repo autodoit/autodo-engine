@@ -154,6 +154,135 @@ class TestTaskdbRequestAndDepartmentStore(unittest.TestCase):
         self.assertEqual(refreshed_request["status"], "已完成")
         self.assertEqual(refreshed_task["status"], "running")
         self.assertEqual(result["node_code"], "A010")
+        self.assertEqual(str(result.get("result_code") or ""), "PASS")
+        self.assertIn("output_payload", result)
+        self.assertIn("executor_meta", result)
+
+    def test_run_task_request_should_accept_standard_receipt_json(self) -> None:
+        """标准回执 JSON 应透传为统一请求执行结果。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir) / "project"
+            workspace_root = project_root / "workspace"
+            config_dir = workspace_root / "config" / "affairs_config"
+            output_dir = workspace_root / "artifacts"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            config_path = config_dir / "A010.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            receipt_path = output_dir / "receipt.json"
+            receipt_payload = {
+                "result_code": "PASS",
+                "message": "标准回执测试",
+                "output_payload": {
+                    "artifacts": [str(output_dir / "done.txt")],
+                    "records": 1,
+                },
+                "executor_meta": {
+                    "source": "unit-test",
+                },
+            }
+            receipt_path.write_text(json.dumps(receipt_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            api.bootstrap_runtime(str(workspace_root))
+            request = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A010_项目初始化",
+                node_code="A010",
+                config_path=str(config_path),
+                payload={"workspace_root": str(workspace_root)},
+            )
+
+            original_run_affair = api.run_affair
+
+            def _fake_run_affair(
+                affair_uid: str,
+                *,
+                config_path: str | Path | None = None,
+                workspace_root: str | Path | None = None,
+                config: dict | None = None,
+            ):
+                self.assertEqual(affair_uid, "ar_A010_项目初始化")
+                return [receipt_path]
+
+            api.run_affair = _fake_run_affair
+            try:
+                result = api.run_task_request(str(request["request_uid"]))
+            finally:
+                api.run_affair = original_run_affair
+
+        self.assertEqual(str(result.get("status") or ""), "completed")
+        self.assertEqual(str(result.get("result_code") or ""), "PASS")
+        self.assertEqual(str(result.get("message") or ""), "标准回执测试")
+        self.assertEqual(int((result.get("output_payload") or {}).get("records") or 0), 1)
+        self.assertEqual(str((result.get("executor_meta") or {}).get("source") or ""), "unit-test")
+
+    def test_run_task_request_should_map_blocked_receipt(self) -> None:
+        """BLOCKED 回执应映射为请求阻断与任务阻断。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir) / "project"
+            workspace_root = project_root / "workspace"
+            config_dir = workspace_root / "config" / "affairs_config"
+            output_dir = workspace_root / "artifacts"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            config_path = config_dir / "A010.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            receipt_path = output_dir / "blocked_receipt.json"
+            receipt_payload = {
+                "result_code": "BLOCKED",
+                "message": "等待人工确认",
+                "output_payload": {
+                    "artifacts": [],
+                    "reason": "manual_gate",
+                },
+                "executor_meta": {
+                    "requires_human": True,
+                },
+            }
+            receipt_path.write_text(json.dumps(receipt_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            api.bootstrap_runtime(str(workspace_root))
+            task = api.create_task(title="阻断测试", goal_text="验证 blocked 回执", current_node_uid="A010")
+            request = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A010_项目初始化",
+                node_code="A010",
+                task_uid=str(task["task_uid"]),
+                config_path=str(config_path),
+                payload={"workspace_root": str(workspace_root)},
+            )
+
+            original_run_affair = api.run_affair
+
+            def _fake_run_affair(
+                affair_uid: str,
+                *,
+                config_path: str | Path | None = None,
+                workspace_root: str | Path | None = None,
+                config: dict | None = None,
+            ):
+                self.assertEqual(affair_uid, "ar_A010_项目初始化")
+                return [receipt_path]
+
+            api.run_affair = _fake_run_affair
+            try:
+                result = api.run_task_request(str(request["request_uid"]))
+            finally:
+                api.run_affair = original_run_affair
+
+            refreshed_request = api.get_task_request(str(request["request_uid"]))
+            refreshed_task = api.task_store.get_task(str(task["task_uid"]))
+
+        self.assertEqual(str(result.get("status") or ""), "blocked")
+        self.assertEqual(str(result.get("result_code") or ""), "BLOCKED")
+        self.assertEqual(str(refreshed_request.get("status") or ""), "已阻断")
+        self.assertEqual(str(refreshed_task.get("status") or ""), "blocked")
 
     def test_project_mainflow_runner_can_build_and_consume_project_requests(self) -> None:
         """应能从项目 config 构造主链请求并完成最小主链模拟运行。"""
@@ -251,6 +380,169 @@ class TestTaskdbRequestAndDepartmentStore(unittest.TestCase):
         self.assertEqual([item["node_code"] for item in result["events"]], ["A010", "A020"])
         self.assertTrue(all(item["status"] == "simulated" for item in result["events"]))
         self.assertTrue(all(item["status"] == "已完成" for item in result["requests"]))
+
+    def test_project_mainflow_should_continue_after_ea_auto_audit(self) -> None:
+        """EA 自动审计放行后，主链应继续运行。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir) / "project"
+            workspace_root = project_root / "workspace"
+            config_root = workspace_root / "config"
+            affairs_config_root = config_root / "affairs_config"
+            output_root = workspace_root / "artifacts"
+            affairs_config_root.mkdir(parents=True, exist_ok=True)
+            output_root.mkdir(parents=True, exist_ok=True)
+
+            graph_path = project_root / ".autodoengine" / "workflows" / "demo" / "graph.json"
+            graph_path.parent.mkdir(parents=True, exist_ok=True)
+            graph_path.write_text(
+                json.dumps(
+                    {
+                        "nodes": [
+                            {"node_uid": "n_A010", "enabled": True},
+                            {"node_uid": "n_A020", "enabled": True},
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            a010_config = affairs_config_root / "A010.json"
+            a020_config = affairs_config_root / "A020.json"
+            a010_config.write_text("{}", encoding="utf-8")
+            a020_config.write_text("{}", encoding="utf-8")
+
+            blocked_receipt = output_root / "a010_blocked.json"
+            blocked_receipt.write_text(
+                json.dumps(
+                    {
+                        "result_code": "BLOCKED",
+                        "message": "等待人工确认",
+                        "output_payload": {
+                            "artifacts": [],
+                            "reason": "manual_gate",
+                        },
+                        "executor_meta": {
+                            "requires_human": True,
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            pass_receipt = output_root / "a020_pass.json"
+            pass_receipt.write_text(
+                json.dumps(
+                    {
+                        "result_code": "PASS",
+                        "message": "执行完成",
+                        "output_payload": {
+                            "artifacts": [str(output_root / "done.txt")],
+                        },
+                        "executor_meta": {
+                            "source": "unit-test",
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            registry_path = config_root / "affair_entry_registry.json"
+            registry_path.write_text(
+                json.dumps(
+                    {
+                        "records": [
+                            {
+                                "node_code": "A010",
+                                "affair_uid": "ar_A010_项目初始化",
+                                "config_path": str(a010_config),
+                                "implemented": True,
+                            },
+                            {
+                                "node_code": "A020",
+                                "affair_uid": "ar_A020_文献导入与预处理",
+                                "config_path": str(a020_config),
+                                "implemented": True,
+                            },
+                        ]
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            project_config_path = config_root / "config.json"
+            project_config_path.write_text(
+                json.dumps(
+                    {
+                        "workflow_name": "测试项目",
+                        "workspace_root": str(workspace_root),
+                        "project": {"project_name": "测试项目", "project_goal": "验证EA自动审计"},
+                        "runtime": {
+                            "workflow_graph_path": str(graph_path),
+                            "start_node": "A010",
+                            "end_node": "A020",
+                            "user_action_routing": {
+                                "execute": "aoe.run",
+                                "continue": "aoe.resume",
+                                "pause": "aoe.pause",
+                                "retry": "aoe.retry_current",
+                                "fallback": "aoe.fallback_current",
+                                "stop": "aoe.stop",
+                                "gate_pass": "aoe.gate_pass",
+                            },
+                        },
+                        "paths": {"affair_entry_registry_path": str(registry_path)},
+                        "node_inputs": {"A010": str(a010_config), "A020": str(a020_config)},
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+            api.bootstrap_runtime(str(workspace_root))
+            original_run_affair = api.run_affair
+
+            def _fake_run_affair(
+                affair_uid: str,
+                *,
+                config_path: str | Path | None = None,
+                workspace_root: str | Path | None = None,
+                config: dict | None = None,
+            ):
+                if affair_uid == "ar_A010_项目初始化":
+                    return [blocked_receipt]
+                if affair_uid == "ar_A020_文献导入与预处理":
+                    return [pass_receipt]
+                raise AssertionError(f"unexpected affair_uid: {affair_uid}")
+
+            api.run_affair = _fake_run_affair
+            try:
+                result = api.run_project_mainflow(
+                    project_config_path=str(project_config_path),
+                    simulate=False,
+                    ea_auto_audit_mode="on",
+                    ea_auto_audit_policy="continue",
+                )
+            finally:
+                api.run_affair = original_run_affair
+
+        self.assertEqual(str(result.get("status") or ""), "completed")
+        audit_events = [item for item in result.get("events") or [] if str(item.get("status") or "") == "ea_auto_audit"]
+        self.assertEqual(len(audit_events), 1)
+        self.assertEqual(str(audit_events[0].get("decision_action") or ""), "continue")
+
+        request_statuses = {str(item.get("node_code") or ""): str(item.get("status") or "") for item in result.get("requests") or []}
+        self.assertEqual(request_statuses.get("A010"), "已完成")
+        self.assertEqual(request_statuses.get("A020"), "已完成")
 
     def test_request_and_department_tables_use_chinese_contract(self) -> None:
         """应创建中文表并写入中文状态与默认百炼配置。"""
@@ -473,6 +765,67 @@ class TestTaskdbRequestAndDepartmentStore(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(str(events[0].get("status") or ""), "completed")
         self.assertEqual(str(refreshed.get("status") or ""), "已完成")
+
+    def test_run_aoe_control_loop_should_stop_after_idle(self) -> None:
+        """控制循环应能消费请求并在连续空闲后停机。"""
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workspace_root = Path(temp_dir) / "workspace"
+            config_dir = workspace_root / "config" / "affairs_config"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            config_path = config_dir / "A010.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            api.bootstrap_runtime(str(workspace_root))
+
+            request = api.create_task_request(
+                request_type="事务执行",
+                target_affair_uid="ar_A010_项目初始化",
+                node_code="A010",
+                config_path=str(config_path),
+                payload={"workspace_root": str(workspace_root)},
+            )
+
+            original_run_affair = api.run_affair
+
+            def _fake_run_affair(
+                affair_uid: str,
+                *,
+                config_path: str | Path | None = None,
+                workspace_root: str | Path | None = None,
+                config: dict | None = None,
+            ):
+                self.assertEqual(affair_uid, "ar_A010_项目初始化")
+                self.assertTrue(Path(str(config_path)).exists())
+                self.assertEqual(Path(str(workspace_root)).resolve(), expected_workspace.resolve())
+                return [expected_workspace / "workspace" / "artifacts" / "ok.txt"]
+
+            expected_workspace = workspace_root
+            api.run_affair = _fake_run_affair
+            try:
+                payload = api.run_aoe_control_loop(
+                    max_cycles=5,
+                    max_requests_per_cycle=1,
+                    stop_when_idle=True,
+                    max_idle_cycles=1,
+                    idle_sleep_seconds=0.0,
+                )
+            finally:
+                api.run_affair = original_run_affair
+
+            refreshed = api.get_task_request(str(request["request_uid"]))
+
+        self.assertEqual(str(payload.get("status") or ""), "stopped_idle")
+        self.assertEqual(str(payload.get("stop_reason") or ""), "idle_stop")
+        self.assertGreaterEqual(int(payload.get("cycle_count") or 0), 2)
+        self.assertGreaterEqual(int(payload.get("total_events") or 0), 1)
+        self.assertEqual(str(refreshed.get("status") or ""), "已完成")
+
+    def test_run_aoe_control_loop_should_validate_cycle_count(self) -> None:
+        """控制循环应拒绝无效拍次数。"""
+
+        with self.assertRaises(ValueError):
+            api.run_aoe_control_loop(max_cycles=0)
 
 if __name__ == "__main__":
     unittest.main()

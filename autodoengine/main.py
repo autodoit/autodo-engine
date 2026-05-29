@@ -91,6 +91,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_run_scheduler_cycle.add_argument("--statuses-json", default="[]")
     p_run_scheduler_cycle.add_argument("--scheduling-policy-json", default="{}")
 
+    p_run_control_loop = sub.add_parser("run-aoe-control-loop", help="执行多拍 AOE 控制循环")
+    p_run_control_loop.add_argument("--max-cycles", type=int, default=1)
+    p_run_control_loop.add_argument("--max-requests-per-cycle", type=int, default=20)
+    p_run_control_loop.add_argument("--simulate", action="store_true", help="仅模拟执行，不真正调用事务")
+    p_run_control_loop.add_argument("--executor-uid", default="aoe-default-executor")
+    p_run_control_loop.add_argument("--lease-seconds", type=int, default=120)
+    p_run_control_loop.add_argument("--statuses-json", default="[]")
+    p_run_control_loop.add_argument("--scheduling-policy-json", default="{}")
+    p_run_control_loop.add_argument("--stop-when-idle", action="store_true", help="持续空闲达到阈值后提前停止")
+    p_run_control_loop.add_argument("--max-idle-cycles", type=int, default=3)
+    p_run_control_loop.add_argument("--idle-sleep-seconds", type=float, default=1.0)
+
     p_validate_project = sub.add_parser("validate-project-mainflow", help="校验项目主链是否可由 AOE 正式运行")
     p_validate_project.add_argument("--project-config-path", required=True)
     p_validate_project.add_argument("--start-node", default=None)
@@ -103,6 +115,33 @@ def build_parser() -> argparse.ArgumentParser:
     p_run_project.add_argument("--simulate", action="store_true", help="仅模拟执行，不真正调用事务")
     p_run_project.add_argument("--source", default="项目经理")
     p_run_project.add_argument("--decision-department-uid", default=默认决策部门UID)
+    p_run_project.add_argument(
+        "--task-management-mode",
+        default="simple",
+        choices=["simple", "complex"],
+        help="任务管理模式：simple=简单任务（默认），complex=复杂任务（实验）",
+    )
+    p_run_project.add_argument(
+        "--ea-auto-audit-mode",
+        default="auto",
+        choices=["auto", "on", "off"],
+        help="EA自动审计模式：auto跟随配置，on强制开启，off强制关闭",
+    )
+    p_run_project.add_argument(
+        "--ea-auto-audit-policy",
+        default=None,
+        help="EA自动审计策略：llm_decide/continue/fail",
+    )
+    p_run_project.add_argument(
+        "--ea-auto-audit-fail-action",
+        default=None,
+        help="EA自动审计调用失败动作：fail/blocked/continue",
+    )
+    p_run_project.add_argument(
+        "--ea-auto-audit-model",
+        default=None,
+        help="EA自动审计模型覆盖（默认读取 config/决策部门）",
+    )
 
     p_show_departments = sub.add_parser("show-decision-departments", help="查看决策部门列表")
 
@@ -246,6 +285,24 @@ def run_cli(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
         return 0
 
+    if args.command == "run-aoe-control-loop":
+        statuses = json.loads(args.statuses_json or "[]")
+        scheduling_policy = json.loads(args.scheduling_policy_json or "{}")
+        payload = api.run_aoe_control_loop(
+            max_cycles=args.max_cycles,
+            max_requests_per_cycle=args.max_requests_per_cycle,
+            simulate=bool(args.simulate),
+            executor_uid=args.executor_uid,
+            lease_seconds=args.lease_seconds,
+            statuses=statuses if isinstance(statuses, list) else None,
+            scheduling_policy=scheduling_policy if isinstance(scheduling_policy, dict) else None,
+            stop_when_idle=bool(args.stop_when_idle),
+            max_idle_cycles=args.max_idle_cycles,
+            idle_sleep_seconds=args.idle_sleep_seconds,
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+        return 0 if str(payload.get("status") or "") in {"completed", "stopped_idle"} else 2
+
     if args.command == "validate-project-mainflow":
         payload = api.validate_project_mainflow(
             project_config_path=args.project_config_path,
@@ -263,6 +320,11 @@ def run_cli(argv: list[str] | None = None) -> int:
             simulate=bool(args.simulate),
             source=args.source,
             decision_department_uid=args.decision_department_uid,
+            task_management_mode=args.task_management_mode,
+            ea_auto_audit_mode=args.ea_auto_audit_mode,
+            ea_auto_audit_policy=args.ea_auto_audit_policy,
+            ea_auto_audit_fail_action=args.ea_auto_audit_fail_action,
+            ea_auto_audit_model=args.ea_auto_audit_model,
         )
         print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
         return 0 if str(payload.get("status") or "") in {"completed", "simulated"} else 2

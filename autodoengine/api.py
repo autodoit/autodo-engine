@@ -7,6 +7,7 @@ import importlib.util
 import json
 import sys
 import tempfile
+import time
 import traceback
 from contextlib import contextmanager
 from hashlib import sha256
@@ -14,7 +15,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List
 
-from autodoengine.core.enums import TaskStatus
+from autodoengine.core.enums import DecisionType, TaskAction, TaskStatus
 from autodoengine.core.types import DecisionResult
 from autodoengine.flow_graph import load_graph_from_file
 from autodoengine.flow_graph.models import Graph
@@ -54,6 +55,7 @@ from autodoengine.taskdb.request_store import (
     请求状态_已提交,
 )
 from autodoengine.taskdb import (
+    append_decision,
     build_blocked_governance_view as _build_blocked_governance_view,
     build_decision_department_view as _build_decision_department_view,
     build_task_full_chain_view as _build_task_full_chain_view,
@@ -186,6 +188,64 @@ def _normalize_affair_outputs(result: Any) -> List[Path]:
         return [Path(str(item)) for item in result]
 
     return [Path(str(result))]
+
+
+def _normalize_affair_receipt(
+    *,
+    outputs: list[Path],
+    affair_uid: str,
+    request_uid: str,
+    node_code: str,
+    task_uid: str | None,
+    executor_uid: str,
+) -> Dict[str, Any]:
+    """把事务输出归一化为统一回执结构。"""
+
+    payload_from_file: dict[str, Any] | None = None
+    for output_path in outputs:
+        if str(output_path.suffix).lower() != ".json":
+            continue
+        try:
+            raw = json.loads(output_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if isinstance(raw, dict):
+            payload_from_file = raw
+            break
+
+    if payload_from_file is not None and {
+        "result_code",
+        "message",
+        "output_payload",
+        "executor_meta",
+    }.issubset(set(payload_from_file.keys())):
+        receipt = dict(payload_from_file)
+        receipt.setdefault("result_code", "PASS")
+        receipt.setdefault("message", "事务执行完成")
+        receipt.setdefault("output_payload", {})
+        receipt.setdefault("executor_meta", {})
+        if not isinstance(receipt.get("output_payload"), dict):
+            receipt["output_payload"] = {"raw_output_payload": receipt.get("output_payload")}
+        if not isinstance(receipt.get("executor_meta"), dict):
+            receipt["executor_meta"] = {"raw_executor_meta": receipt.get("executor_meta")}
+        receipt["output_payload"].setdefault("artifacts", [str(item) for item in outputs])
+        return receipt
+
+    return {
+        "result_code": "PASS",
+        "message": "事务执行完成",
+        "output_payload": {
+            "artifacts": [str(item) for item in outputs],
+            "affair_uid": affair_uid,
+            "request_uid": request_uid,
+            "node_code": node_code,
+            "task_uid": task_uid,
+        },
+        "executor_meta": {
+            "executor_uid": executor_uid,
+            "receipt_source": "outputs",
+        },
+    }
 
 
 @contextmanager
@@ -605,6 +665,307 @@ def _slice_project_nodes(node_sequence: list[str], start_node: str | None, end_n
     return node_sequence[start_index : end_index + 1]
 
 
+def _normalize_ea_auto_audit_mode(mode_text: str | None) -> str:
+    """归一化 EA 自动审计模式。"""
+
+    text = str(mode_text or "").strip().lower()
+    if text in {"on", "true", "1", "enabled", "开启"}:
+        return "on"
+    if text in {"off", "false", "0", "disabled", "关闭"}:
+        return "off"
+    return "auto"
+
+
+def _normalize_ea_auto_audit_policy(policy_text: str | None) -> str:
+    """归一化 EA 自动审计策略。"""
+
+    text = str(policy_text or "").strip().lower()
+    if text in {"continue", "auto_pass", "pass", "自动放行", "放行", "放行继续"}:
+        return "continue"
+    if text in {"fail", "failed", "直接失败", "标记失败", "失败"}:
+        return "fail"
+    return "llm_decide"
+
+
+def _normalize_ea_auto_audit_fail_action(action_text: str | None) -> str:
+    """归一化 EA 自动审计失败动作。"""
+
+    text = str(action_text or "").strip().lower()
+    if text in {"continue", "pass", "继续", "继续执行"}:
+        return "continue"
+    if text in {"blocked", "block", "阻断", "保持阻断"}:
+        return "blocked"
+    return "fail"
+
+
+def _extract_json_object(raw_text: str) -> dict[str, Any]:
+    """从文本中提取首个 JSON 对象。"""
+
+    text = str(raw_text or "").strip()
+    if not text:
+        return {}
+
+    try:
+        payload = json.loads(text)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        pass
+
+    start_index = text.find("{")
+    end_index = text.rfind("}")
+    if start_index >= 0 and end_index > start_index:
+        snippet = text[start_index : end_index + 1]
+        try:
+            payload = json.loads(snippet)
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            pass
+
+    return {}
+
+
+def _resolve_ea_auto_audit_options(
+    *,
+    runtime: dict[str, Any],
+    mode: str | None,
+    policy: str | None,
+    fail_action: str | None,
+    model: str | None,
+) -> dict[str, Any]:
+    """解析主链运行时 EA 自动审计参数。"""
+
+    runtime_mode = runtime.get("ea_auto_audit_mode") or runtime.get("EA自动审计模式")
+    normalized_mode = _normalize_ea_auto_audit_mode(mode if mode is not None else str(runtime_mode or ""))
+
+    if normalized_mode == "auto":
+        gate_mode_text = str(runtime.get("gate_mode") or runtime.get("闸门模式") or "").strip().lower()
+        enabled = gate_mode_text in {"auto_pass", "自动通过", "auto"}
+    else:
+        enabled = normalized_mode == "on"
+
+    runtime_policy = runtime.get("ea_auto_audit_policy") or runtime.get("EA自动审计策略")
+    runtime_fail_action = runtime.get("ea_auto_audit_fail_action") or runtime.get("EA自动审计失败动作")
+    runtime_model = runtime.get("ea_auto_audit_model") or runtime.get("EA自动审计模型")
+
+    return {
+        "mode": normalized_mode,
+        "enabled": bool(enabled),
+        "policy": _normalize_ea_auto_audit_policy(policy if policy is not None else str(runtime_policy or "")),
+        "fail_action": _normalize_ea_auto_audit_fail_action(
+            fail_action if fail_action is not None else str(runtime_fail_action or "")
+        ),
+        "model": str(model or runtime_model or "").strip(),
+    }
+
+
+def _invoke_ea_auto_audit(
+    *,
+    context: dict[str, Any],
+    blocked_event: dict[str, Any],
+    decision_department_uid: str,
+    audit_options: dict[str, Any],
+) -> dict[str, Any]:
+    """调用 EA 自动审计并返回决策动作。"""
+
+    policy = str(audit_options.get("policy") or "llm_decide")
+    fail_action = _normalize_ea_auto_audit_fail_action(str(audit_options.get("fail_action") or "fail"))
+    if policy in {"continue", "fail"}:
+        return {
+            "status": "PASS",
+            "action": policy,
+            "reason": "EA 自动审计按固定策略执行。",
+            "selected_model": "",
+            "decision_source": "policy",
+            "attempts": [],
+            "raw_response": "",
+        }
+
+    project_config = context.get("project_config") if isinstance(context.get("project_config"), dict) else {}
+    runtime = context.get("runtime") if isinstance(context.get("runtime"), dict) else {}
+    llm_payload = project_config.get("llm") if isinstance(project_config.get("llm"), dict) else {}
+
+    try:
+        department_payload = _get_department(decision_department_uid)
+    except Exception:
+        department_payload = {}
+
+    model_name = (
+        str(audit_options.get("model") or "").strip()
+        or str(runtime.get("synthesis_model") or "").strip()
+        or str(llm_payload.get("synthesis_model") or "").strip()
+        or str(llm_payload.get("review_state_model") or "").strip()
+        or str(department_payload.get("llm_model") or "").strip()
+        or "qwen-max"
+    )
+    api_key_file_raw = str(llm_payload.get("aliyun_api_key_file") or llm_payload.get("api_key_file") or "").strip()
+
+    project_config_path = Path(str(context.get("project_config_path") or "")).resolve()
+    workspace_root = Path(str(context.get("workspace_root") or Path.cwd())).resolve()
+    api_key_file = ""
+    if api_key_file_raw:
+        try:
+            api_key_file = str(resolve_portable_path(api_key_file_raw, base_dir=project_config_path.parent))
+        except Exception:
+            api_key_file = api_key_file_raw
+
+    system_prompt = (
+        "你是 AOE 的 EA 自动审计器。"
+        "当事务返回 BLOCKED 时，你必须给出是否继续主链的机器决策。"
+        "仅输出 JSON，不要输出任何解释性文本。"
+    )
+    user_prompt = (
+        "请根据以下阻断事件给出自动审计决策。\n"
+        "输出 JSON 格式：{\"action\": \"continue|fail|blocked\", \"reason\": \"...\"}\n"
+        "阻断事件：\n"
+        f"{json.dumps(blocked_event, ensure_ascii=False, indent=2)}"
+    )
+
+    try:
+        llm_module = _import_module_with_repo_fallback("autodokit.tools.llm_clients", workspace_root=workspace_root)
+        invoke_llm = getattr(llm_module, "invoke_aliyun_llm")
+        intent_cls = getattr(llm_module, "ModelRoutingIntent", None)
+
+        intent_obj = None
+        if callable(intent_cls):
+            try:
+                intent_obj = intent_cls(
+                    task_type="general",
+                    quality_tier="high",
+                    budget_tier="balanced",
+                    risk_level="high",
+                    model=model_name,
+                    affair_name="EA自动审计",
+                )
+            except Exception:
+                intent_obj = None
+
+        llm_result = invoke_llm(
+            prompt=user_prompt,
+            system=system_prompt,
+            intent=intent_obj,
+            max_tokens=512,
+            temperature=0.1,
+            api_key_file=api_key_file or None,
+            config_path=str(project_config_path) if project_config_path.exists() else None,
+            affair_name="EA自动审计",
+        )
+    except Exception as exc:
+        return {
+            "status": "FAIL",
+            "action": fail_action,
+            "reason": f"EA 自动审计调用失败：{exc}",
+            "selected_model": model_name,
+            "decision_source": "llm",
+            "attempts": [],
+            "raw_response": "",
+            "error": str(exc),
+        }
+
+    status_text = str(llm_result.get("status") or "").upper()
+    response_payload = llm_result.get("response") if isinstance(llm_result.get("response"), dict) else {}
+    response_text = str(response_payload.get("text") or "").strip()
+    parsed_payload = _extract_json_object(response_text)
+
+    parsed_action = _normalize_ea_auto_audit_fail_action(str(parsed_payload.get("action") or ""))
+    if not str(parsed_payload.get("action") or "").strip() and status_text == "PASS":
+        parsed_action = "fail"
+
+    if status_text != "PASS":
+        parsed_action = fail_action
+
+    reason_text = str(
+        parsed_payload.get("reason")
+        or parsed_payload.get("explanation")
+        or response_text
+        or llm_result.get("error")
+        or "EA 自动审计未返回有效结论。"
+    ).strip()
+
+    return {
+        "status": status_text or "FAIL",
+        "action": parsed_action,
+        "reason": reason_text,
+        "selected_model": str(llm_result.get("selected_model") or model_name),
+        "decision_source": "llm",
+        "attempts": llm_result.get("attempts") if isinstance(llm_result.get("attempts"), list) else [],
+        "raw_response": response_text,
+        "error": str(llm_result.get("error") or ""),
+    }
+
+
+def _append_ea_auto_audit_decision(
+    *,
+    task_uid: str,
+    node_code: str,
+    request_uid: str,
+    blocked_event: dict[str, Any],
+    audit_result: dict[str, Any],
+    decision_department_uid: str,
+) -> str:
+    """把 EA 自动审计结果写入决策库。"""
+
+    action = str(audit_result.get("action") or "blocked")
+    if action == "continue":
+        selected_action = TaskAction.CONTINUE
+        task_status_after = TaskStatus.RUNNING
+    elif action == "fail":
+        selected_action = TaskAction.FAIL
+        task_status_after = TaskStatus.FAILED
+    else:
+        selected_action = TaskAction.SUSPEND
+        task_status_after = TaskStatus.BLOCKED
+
+    decision_uid = f"ea-auto-audit-{int(time.time() * 1000)}-{str(request_uid or node_code or 'node').lower()}"
+    reason_text = str(audit_result.get("reason") or "EA 自动审计")
+    reason_code = f"ea_auto_audit_{action}"
+
+    decision_result = DecisionResult(
+        decision_uid=decision_uid,
+        task_uid=task_uid,
+        node_uid=node_code,
+        decision_type=DecisionType.STATUS,
+        selected_action=selected_action,
+        task_status_before=TaskStatus.BLOCKED,
+        task_status_after=task_status_after,
+        next_node_uid=None,
+        reason_code=reason_code,
+        reason_text=reason_text,
+        decision_actor="ea_auto_audit",
+        decision_members=["ea"],
+        decision_mode="EA_AUTO",
+        evidence=[json.dumps(blocked_event, ensure_ascii=False)],
+    )
+
+    packet_payload = {
+        "packet_uid": f"packet-{decision_uid}",
+        "task_uid": task_uid,
+        "node_uid": node_code,
+        "decision_type": "status",
+        "task_summary": {"task_uid": task_uid, "request_uid": request_uid},
+        "node_summary": {"node_code": node_code, "request_uid": request_uid},
+        "receipt": blocked_event,
+        "candidate_actions": ["continue", "fail", "blocked"],
+        "recommended_action": action,
+        "rule_hits": ["ea_auto_audit"],
+        "decision_members": ["ea"],
+        "decision_mode": "EA_AUTO",
+        "artifact_refs": [],
+        "agent_recommendations": [
+            {
+                "department_uid": decision_department_uid,
+                "selected_model": str(audit_result.get("selected_model") or ""),
+                "decision_source": str(audit_result.get("decision_source") or ""),
+            }
+        ],
+        "evidence": [reason_text],
+    }
+
+    append_decision(decision_result, packet_payload)
+    return decision_uid
+
+
 def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[str, Any]:
     """解析项目主链运行上下文。"""
 
@@ -874,6 +1235,21 @@ def run_task_request(
     )
 
     if simulate:
+        receipt = {
+            "result_code": "PASS",
+            "message": "模拟执行完成",
+            "output_payload": {
+                "artifacts": [],
+                "affair_uid": target_affair_uid,
+                "request_uid": request_uid,
+                "node_code": node_code,
+                "task_uid": task_uid,
+            },
+            "executor_meta": {
+                "executor_uid": normalized_executor_uid,
+                "mode": "simulate",
+            },
+        }
         result = {
             "mode": "simulate",
             "task_uid": task_uid,
@@ -883,6 +1259,11 @@ def run_task_request(
             "executor_uid": normalized_executor_uid,
             "output_count": 0,
             "outputs": [],
+            "result_code": "PASS",
+            "message": "模拟执行完成",
+            "output_payload": dict(receipt.get("output_payload") or {}),
+            "executor_meta": dict(receipt.get("executor_meta") or {}),
+            "receipt": receipt,
         }
         _mark_request_ready_for_commit(request_uid, result=result)
         _mark_request_committed(request_uid, result=result)
@@ -919,6 +1300,22 @@ def run_task_request(
                 raise
             outputs = fallback_outputs
     except Exception as exc:
+        receipt = {
+            "result_code": "FAIL",
+            "message": f"事务执行异常：{exc}",
+            "output_payload": {
+                "artifacts": [],
+                "affair_uid": target_affair_uid,
+                "request_uid": request_uid,
+                "node_code": node_code,
+                "task_uid": task_uid,
+            },
+            "executor_meta": {
+                "executor_uid": normalized_executor_uid,
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+            },
+        }
         result = {
             "mode": "execute",
             "task_uid": task_uid,
@@ -929,6 +1326,11 @@ def run_task_request(
             "error_type": type(exc).__name__,
             "error_message": str(exc),
             "traceback": traceback.format_exc(limit=8),
+            "result_code": "FAIL",
+            "message": f"事务执行异常：{exc}",
+            "output_payload": dict(receipt.get("output_payload") or {}),
+            "executor_meta": dict(receipt.get("executor_meta") or {}),
+            "receipt": receipt,
         }
         _mark_request_failed(request_uid, result=result)
         if task_uid:
@@ -945,6 +1347,28 @@ def run_task_request(
             **result,
         }
 
+    receipt = _normalize_affair_receipt(
+        outputs=outputs,
+        affair_uid=target_affair_uid,
+        request_uid=request_uid,
+        node_code=node_code,
+        task_uid=task_uid,
+        executor_uid=normalized_executor_uid,
+    )
+    result_code = str(receipt.get("result_code") or "PASS").upper()
+    normalized_message = str(receipt.get("message") or "事务执行完成")
+    normalized_output_payload = (
+        dict(receipt.get("output_payload") or {})
+        if isinstance(receipt.get("output_payload"), dict)
+        else {"raw_output_payload": receipt.get("output_payload")}
+    )
+    normalized_output_payload.setdefault("artifacts", [str(item) for item in outputs])
+    normalized_executor_meta = (
+        dict(receipt.get("executor_meta") or {})
+        if isinstance(receipt.get("executor_meta"), dict)
+        else {"raw_executor_meta": receipt.get("executor_meta")}
+    )
+
     result = {
         "mode": "execute",
         "task_uid": task_uid,
@@ -954,19 +1378,62 @@ def run_task_request(
         "executor_uid": normalized_executor_uid,
         "output_count": len(outputs),
         "outputs": [str(item) for item in outputs],
+        "result_code": result_code,
+        "message": normalized_message,
+        "output_payload": normalized_output_payload,
+        "executor_meta": normalized_executor_meta,
+        "receipt": {
+            "result_code": result_code,
+            "message": normalized_message,
+            "output_payload": normalized_output_payload,
+            "executor_meta": normalized_executor_meta,
+        },
     }
-    _mark_request_ready_for_commit(request_uid, result=result)
-    _mark_request_committed(request_uid, result=result)
-    _mark_request_completed(request_uid, result=result)
+
+    if result_code == "PASS":
+        _mark_request_ready_for_commit(request_uid, result=result)
+        _mark_request_committed(request_uid, result=result)
+        _mark_request_completed(request_uid, result=result)
+        release_task_request_lease(
+            request_uid=request_uid,
+            executor_uid=normalized_executor_uid,
+            lease_status="已完成",
+            heartbeat_status="空闲",
+        )
+        log_store.append_runtime_event("事务请求完成", result)
+        return {
+            "status": "completed",
+            **result,
+        }
+
+    if result_code == "BLOCKED":
+        _mark_request_blocked(request_uid, result=result)
+        if task_uid:
+            task_store.update_task_status(task_uid, TaskStatus.BLOCKED)
+        release_task_request_lease(
+            request_uid=request_uid,
+            executor_uid=normalized_executor_uid,
+            lease_status="已释放",
+            heartbeat_status="阻断",
+        )
+        log_store.append_blocked_event("事务请求阻断", result)
+        return {
+            "status": "blocked",
+            **result,
+        }
+
+    _mark_request_failed(request_uid, result=result)
+    if task_uid:
+        task_store.mark_task_failed(task_uid)
     release_task_request_lease(
         request_uid=request_uid,
         executor_uid=normalized_executor_uid,
-        lease_status="已完成",
-        heartbeat_status="空闲",
+        lease_status="已失败",
+        heartbeat_status="阻断",
     )
-    log_store.append_runtime_event("事务请求完成", result)
+    log_store.append_error_event("事务请求失败", result)
     return {
-        "status": "completed",
+        "status": "failed",
         **result,
     }
 
@@ -1073,6 +1540,162 @@ def run_scheduler_cycle(
     return events
 
 
+def run_aoe_control_loop(
+    *,
+    max_cycles: int = 1,
+    max_requests_per_cycle: int = 20,
+    simulate: bool = False,
+    executor_uid: str = "aoe-default-executor",
+    lease_seconds: int = 120,
+    statuses: list[str] | None = None,
+    scheduling_policy: dict[str, Any] | None = None,
+    stop_when_idle: bool = False,
+    max_idle_cycles: int = 3,
+    idle_sleep_seconds: float = 1.0,
+) -> Dict[str, Any]:
+    """运行 AOE 简单任务模式控制循环。
+
+    Args:
+        max_cycles: 最多执行拍次。
+        max_requests_per_cycle: 每拍最多消费请求数。
+        simulate: 是否仅模拟执行。
+        executor_uid: 执行者 UID。
+        lease_seconds: 租约秒数。
+        statuses: 候选状态集合。
+        scheduling_policy: 调度评分策略。
+        stop_when_idle: 是否在持续空闲后提前停止。
+        max_idle_cycles: 空闲停机阈值拍数。
+        idle_sleep_seconds: 相邻拍次空闲间隔秒数。
+
+    Returns:
+        控制循环运行摘要。
+    """
+
+    normalized_max_cycles = int(max_cycles or 0)
+    if normalized_max_cycles <= 0:
+        raise ValueError("max_cycles 必须为正整数")
+
+    normalized_max_requests = max(1, int(max_requests_per_cycle or 1))
+    normalized_executor_uid = str(executor_uid or "aoe-default-executor").strip() or "aoe-default-executor"
+    normalized_max_idle_cycles = max(1, int(max_idle_cycles or 1))
+    normalized_idle_sleep_seconds = max(0.0, float(idle_sleep_seconds or 0.0))
+
+    cycle_reports: list[dict[str, Any]] = []
+    total_events = 0
+    idle_cycles = 0
+    stop_reason = "max_cycles_reached"
+    final_status = "completed"
+
+    _upsert_executor_heartbeat(
+        executor_uid=normalized_executor_uid,
+        executor_type="agent",
+        current_request_uid="",
+        status="忙碌",
+        metadata={
+            "stage": "aoe_control_loop",
+            "phase": "start",
+        },
+    )
+    log_store.append_runtime_event(
+        "AOE控制循环启动",
+        {
+            "executor_uid": normalized_executor_uid,
+            "simulate": bool(simulate),
+            "max_cycles": normalized_max_cycles,
+            "max_requests_per_cycle": normalized_max_requests,
+            "stop_when_idle": bool(stop_when_idle),
+            "max_idle_cycles": normalized_max_idle_cycles,
+        },
+    )
+
+    try:
+        for cycle_index in range(1, normalized_max_cycles + 1):
+            events = run_scheduler_cycle(
+                max_requests=normalized_max_requests,
+                simulate=simulate,
+                executor_uid=normalized_executor_uid,
+                lease_seconds=lease_seconds,
+                statuses=statuses,
+                scheduling_policy=scheduling_policy,
+            )
+
+            event_count = len(events)
+            total_events += event_count
+            if event_count <= 0:
+                idle_cycles += 1
+            else:
+                idle_cycles = 0
+
+            request_uids = [str(item.get("request_uid") or "") for item in events if str(item.get("request_uid") or "")]
+            cycle_reports.append(
+                {
+                    "cycle_index": cycle_index,
+                    "event_count": event_count,
+                    "idle_cycles": idle_cycles,
+                    "request_uids": request_uids,
+                    "events": events,
+                }
+            )
+            log_store.append_runtime_event(
+                "AOE控制循环拍次",
+                {
+                    "executor_uid": normalized_executor_uid,
+                    "cycle_index": cycle_index,
+                    "event_count": event_count,
+                    "idle_cycles": idle_cycles,
+                    "request_uids": request_uids,
+                },
+            )
+
+            if bool(stop_when_idle) and idle_cycles >= normalized_max_idle_cycles:
+                stop_reason = "idle_stop"
+                final_status = "stopped_idle"
+                break
+
+            if cycle_index < normalized_max_cycles and normalized_idle_sleep_seconds > 0:
+                time.sleep(normalized_idle_sleep_seconds)
+    except Exception:
+        final_status = "failed"
+        raise
+    finally:
+        _upsert_executor_heartbeat(
+            executor_uid=normalized_executor_uid,
+            executor_type="agent",
+            current_request_uid="",
+            status="空闲",
+            metadata={
+                "stage": "aoe_control_loop",
+                "phase": "end",
+                "status": final_status,
+                "cycle_count": len(cycle_reports),
+                "total_events": total_events,
+            },
+        )
+        log_store.append_runtime_event(
+            "AOE控制循环结束",
+            {
+                "executor_uid": normalized_executor_uid,
+                "status": final_status,
+                "stop_reason": stop_reason,
+                "cycle_count": len(cycle_reports),
+                "total_events": total_events,
+            },
+        )
+
+    return {
+        "status": final_status,
+        "executor_uid": normalized_executor_uid,
+        "simulate": bool(simulate),
+        "max_cycles": normalized_max_cycles,
+        "max_requests_per_cycle": normalized_max_requests,
+        "cycle_count": len(cycle_reports),
+        "idle_cycles": idle_cycles,
+        "stop_reason": stop_reason,
+        "total_events": total_events,
+        "cycles": cycle_reports,
+    }
+
+
 def run_project_mainflow(
     *,
     project_config_path: str | Path,
@@ -1081,6 +1704,11 @@ def run_project_mainflow(
     simulate: bool = False,
     source: str = "项目经理",
     decision_department_uid: str = "dept-default",
+    task_management_mode: str = "simple",
+    ea_auto_audit_mode: str | None = None,
+    ea_auto_audit_policy: str | None = None,
+    ea_auto_audit_fail_action: str | None = None,
+    ea_auto_audit_model: str | None = None,
 ) -> Dict[str, Any]:
     """根据项目 config 生成事务请求并正式执行主链片段。"""
 
@@ -1097,6 +1725,19 @@ def run_project_mainflow(
     workspace_root = Path(str(context["workspace_root"]))
     bootstrap_runtime(str(workspace_root))
 
+    normalized_task_management_mode = str(task_management_mode or "simple").strip().lower()
+    if normalized_task_management_mode not in {"simple", "complex"}:
+        raise ValueError("task_management_mode 仅支持 simple 或 complex")
+
+    runtime_payload = context["runtime"] if isinstance(context["runtime"], dict) else {}
+    ea_auto_audit_options = _resolve_ea_auto_audit_options(
+        runtime=runtime_payload,
+        mode=ea_auto_audit_mode,
+        policy=ea_auto_audit_policy,
+        fail_action=ea_auto_audit_fail_action,
+        model=ea_auto_audit_model,
+    )
+
     task = create_task(
         title=f"{context['project_name']}主链运行",
         goal_text=str(context.get("project_goal") or "项目主链运行"),
@@ -1110,7 +1751,9 @@ def run_project_mainflow(
             "project_config_path": str(context["project_config_path"]),
             "workspace_root": str(workspace_root),
             "decision_department_uid": decision_department_uid,
+            "task_management_mode": normalized_task_management_mode,
             "target_nodes": target_nodes,
+            "ea_auto_audit": dict(ea_auto_audit_options),
         },
     )
     task_store.update_task_status(task_uid, TaskStatus.RUNNING)
@@ -1123,12 +1766,104 @@ def run_project_mainflow(
             "start_node": target_nodes[0],
             "end_node": target_nodes[-1],
             "simulate": bool(simulate),
+            "task_management_mode": normalized_task_management_mode,
             "decision_department_uid": decision_department_uid,
+            "ea_auto_audit": dict(ea_auto_audit_options),
         },
     )
 
     events: list[dict[str, Any]] = []
     final_status = "completed"
+
+    def _try_ea_auto_audit(blocked_event: dict[str, Any], *, request_uid: str, node_code: str) -> bool:
+        """对 BLOCKED 结果执行 EA 自动审计。"""
+
+        nonlocal final_status
+
+        if not bool(ea_auto_audit_options.get("enabled", False)):
+            task_store.update_task_status(task_uid, TaskStatus.BLOCKED)
+            final_status = "blocked"
+            return False
+
+        audit_result = _invoke_ea_auto_audit(
+            context=context,
+            blocked_event=blocked_event,
+            decision_department_uid=decision_department_uid,
+            audit_options=ea_auto_audit_options,
+        )
+        action = _normalize_ea_auto_audit_fail_action(str(audit_result.get("action") or ""))
+
+        decision_uid = ""
+        decision_error = ""
+        try:
+            decision_uid = _append_ea_auto_audit_decision(
+                task_uid=task_uid,
+                node_code=node_code,
+                request_uid=request_uid,
+                blocked_event=blocked_event,
+                audit_result=audit_result,
+                decision_department_uid=decision_department_uid,
+            )
+        except Exception as exc:
+            decision_error = str(exc)
+            log_store.append_error_event(
+                "EA自动审计决策落库失败",
+                {
+                    "task_uid": task_uid,
+                    "request_uid": request_uid,
+                    "node_code": node_code,
+                    "error": decision_error,
+                },
+            )
+
+        audit_event = {
+            "status": "ea_auto_audit",
+            "task_uid": task_uid,
+            "request_uid": request_uid,
+            "node_code": node_code,
+            "decision_uid": decision_uid,
+            "decision_action": action,
+            "decision_error": decision_error,
+            "options": dict(ea_auto_audit_options),
+            "audit_result": dict(audit_result),
+        }
+        events.append(audit_event)
+        log_store.append_runtime_event("EA自动审计决策", audit_event)
+
+        if request_uid:
+            audit_result_payload = {
+                "mode": "execute",
+                "status": "ea_auto_audit",
+                "task_uid": task_uid,
+                "request_uid": request_uid,
+                "node_code": node_code,
+                "decision_uid": decision_uid,
+                "decision_action": action,
+                "blocked_event": blocked_event,
+                "audit_result": audit_result,
+            }
+            if action == "continue":
+                _mark_request_ready_for_commit(request_uid, result=audit_result_payload)
+                _mark_request_committed(request_uid, result=audit_result_payload)
+                _mark_request_completed(request_uid, result=audit_result_payload)
+            elif action == "fail":
+                _mark_request_failed(request_uid, result=audit_result_payload)
+            else:
+                _mark_request_blocked(request_uid, result=audit_result_payload)
+
+        if action == "continue":
+            task_store.update_task_status(task_uid, TaskStatus.RUNNING)
+            return True
+
+        if action == "fail":
+            task_store.mark_task_failed(task_uid)
+            final_status = "failed"
+            return False
+
+        task_store.update_task_status(task_uid, TaskStatus.BLOCKED)
+        final_status = "blocked"
+        return False
+
     for node_code in target_nodes:
         try:
             request = create_task_request_from_project_node(
@@ -1139,11 +1874,10 @@ def run_project_mainflow(
                 metadata={
                     "runner_type": "project_mainflow",
                     "decision_department_uid": decision_department_uid,
+                    "task_management_mode": normalized_task_management_mode,
                 },
             )
         except Exception as exc:
-            final_status = "blocked"
-            task_store.update_task_status(task_uid, TaskStatus.BLOCKED)
             blocked_event = {
                 "status": "blocked",
                 "task_uid": task_uid,
@@ -1153,11 +1887,12 @@ def run_project_mainflow(
             }
             events.append(blocked_event)
             log_store.append_blocked_event("项目主链阻断", blocked_event)
+            if _try_ea_auto_audit(blocked_event, request_uid="", node_code=node_code):
+                continue
             break
 
         record = context["records"].get(node_code) or {}
         if not bool(record.get("implemented", False)):
-            final_status = "blocked"
             blocked_result = {
                 "task_uid": task_uid,
                 "request_uid": str(request.get("request_uid") or ""),
@@ -1166,9 +1901,14 @@ def run_project_mainflow(
                 "reason": "implemented_false",
             }
             _mark_request_blocked(str(request.get("request_uid") or ""), result=blocked_result)
-            task_store.update_task_status(task_uid, TaskStatus.BLOCKED)
             events.append({"status": "blocked", **blocked_result})
             log_store.append_blocked_event("事务请求阻断", blocked_result)
+            if _try_ea_auto_audit(
+                {"status": "blocked", **blocked_result},
+                request_uid=str(request.get("request_uid") or ""),
+                node_code=node_code,
+            ):
+                continue
             break
 
         event = run_task_request(str(request.get("request_uid") or ""), simulate=simulate)
@@ -1177,7 +1917,12 @@ def run_project_mainflow(
             final_status = "failed"
             break
         if event.get("status") == "blocked":
-            final_status = "blocked"
+            if _try_ea_auto_audit(
+                event,
+                request_uid=str(event.get("request_uid") or request.get("request_uid") or ""),
+                node_code=node_code,
+            ):
+                continue
             break
 
     if final_status == "completed":
@@ -1195,6 +1940,7 @@ def run_project_mainflow(
         "project_config_path": str(context["project_config_path"]),
         "workspace_root": str(workspace_root),
         "decision_department_uid": decision_department_uid,
+        "ea_auto_audit": dict(ea_auto_audit_options),
         "simulate": bool(simulate),
         "validate": validation,
         "events": events,
