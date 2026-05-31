@@ -365,6 +365,8 @@ SQLite 物理层会把这些状态、动作、关系类型持久化为中文值�
 7. `errors`
 8. `metadata`
 
+其中 `audit_path` 对应的审计文件名使用本地时区的连续 14 位紧凑时间戳，格式为 `YYYYMMDDHHMMSS`。
+
 ### 6.4 首批 capability 清单
 
 | capability_id | exposure | side_effect | 说明 |
