@@ -38,7 +38,7 @@ def write_audit_record(record: Dict[str, Any], *, workspace_root: str | Path | N
 
     audit_dir = default_audit_dir(workspace_root=workspace_root)
     audit_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = now_compact(fmt="%Y%m%dT%H%M%S")
+    timestamp = now_compact()
     audit_path = audit_dir / f"capability_audit_{timestamp}_{uuid4().hex[:8]}.json"
     audit_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     return audit_path

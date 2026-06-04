@@ -571,7 +571,7 @@ def run_node_runtime_workflow(
             output_dir = (workspace_root / output_dir).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        trace_file = output_dir / f"node_runtime_trace_{workflow_path.stem}_{now_compact(fmt='%Y%m%d_%H%M%S')}_{run_id[:8]}.json"
+        trace_file = output_dir / f"node_runtime_trace_{workflow_path.stem}_{now_compact()}_{run_id[:8]}.json"
         payload = {
             "run_id": run_id,
             "workflow_path": str(workflow_path),

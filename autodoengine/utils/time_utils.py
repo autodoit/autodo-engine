@@ -28,7 +28,7 @@ def now_iso(timezone_name: str | None = None, *, timespec: str | None = None) ->
     return current.isoformat()
 
 
-def now_compact(timezone_name: str | None = None, fmt: str = "%Y%m%dT%H%M%S") -> str:
+def now_compact(timezone_name: str | None = None, fmt: str = "%Y%m%d%H%M%S") -> str:
     return now_dt(timezone_name).strftime(fmt)
 
 
