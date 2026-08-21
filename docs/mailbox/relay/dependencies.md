@@ -1,4 +1,4 @@
-# dependency-governance dependencies: autodo-engine
+# mailbox/relay dependencies: autodo-engine
 
 This project depends on the following governed local projects.
 
