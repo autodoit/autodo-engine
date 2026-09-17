@@ -13,6 +13,7 @@ dependencies = [
     "openai>=1.40.0",
     "simpleeval>=0.9.13",
     "playwright>=1.58.0",
+    "jinja2>=3.1.0",
 ]
 
 [build-system]
@@ -34,3 +35,10 @@ aok = "autodoengine.main:main"
 [[tool.uv.index]]
 url = "https://pypi.org/simple"
 default = true
+
+[tool.pytest.ini_options]
+# 只从 tests/ 收集用例；scripts/ 下是可运行脚本（如 run_sandbox_test.py 会在导入期 sys.exit），不是 pytest 测试。
+testpaths = ["tests"]
+markers = [
+    "smoke: 冒烟测试——最小可导入性/存活契约，CI 必跑门",
+]
