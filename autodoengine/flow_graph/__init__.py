@@ -1,6 +1,26 @@
 """静态图与任务单步运行时模块。"""
 
-from .models import Graph, GraphContainer, GraphEdge, GraphNode, GraphPolicy
+from .models import (
+    Edge,
+    FlowGraphError,
+    Graph,
+    GraphContainer,
+    GraphEdge,
+    GraphNode,
+    GraphPolicy,
+    Node,
+    NodeContent,
+    NodeContentV2,
+    NodePort,
+)
+from .workflow import FlowGraph
+from .templates import (
+    NodeTemplate,
+    create_node_from_template,
+    load_node_template,
+    load_node_templates,
+)
+from .compiler import compile_flow_graph_to_workflow_dict, write_workflow_json
 from .graph_loader import load_graph, load_graph_from_dict, load_graph_from_file
 from .graph_validator import (
     validate_affair_bindings,
@@ -18,6 +38,19 @@ __all__ = [
     "GraphContainer",
     "GraphNode",
     "GraphEdge",
+    "FlowGraphError",
+    "Node",
+    "NodePort",
+    "NodeContent",
+    "NodeContentV2",
+    "Edge",
+    "FlowGraph",
+    "NodeTemplate",
+    "create_node_from_template",
+    "load_node_template",
+    "load_node_templates",
+    "compile_flow_graph_to_workflow_dict",
+    "write_workflow_json",
     "load_graph",
     "load_graph_from_file",
     "load_graph_from_dict",

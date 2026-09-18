@@ -5,7 +5,7 @@ description = "工具包：用于按通用的任务事务工作流程系统的�
 authors = [
     { name = "Ethan Lin", email = "ElementsPhoenix@outlook.com" },
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "bibtexparser>=1.4.0",
     "pandas>=3.0.1",

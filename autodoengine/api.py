@@ -72,6 +72,7 @@ from autodoengine.utils.path_tools import (
     resolve_portable_path,
 )
 from autodoengine.utils.runtime_context import get_runtime_context, set_runtime_context
+from autodoengine.utils.config_normalizer import normalize_project_config
 
 
 def _load_tools_module() -> Any:
@@ -424,7 +425,7 @@ def create_task_request_from_project_node(
     """根据项目级配置与节点编码构造标准事务请求。"""
 
     resolved_project_config_path = resolve_portable_path(str(project_config_path), base_dir=Path.cwd())
-    project_config = load_json_or_py(resolved_project_config_path)
+    project_config = normalize_project_config(load_json_or_py(resolved_project_config_path))
 
     normalized_node_code = str(node_code or "").strip().upper()
     if not normalized_node_code:
@@ -432,7 +433,7 @@ def create_task_request_from_project_node(
 
     node_inputs = project_config.get("node_inputs")
     if not isinstance(node_inputs, dict):
-        raise KeyError("项目配置缺少 node_inputs")
+        raise KeyError("项目配置缺少 node_inputs（中文主契约键：节点输入）")
     if normalized_node_code not in node_inputs:
         raise KeyError(f"node_inputs 中不存在节点：{normalized_node_code}")
 
@@ -970,7 +971,7 @@ def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[s
     """解析项目主链运行上下文。"""
 
     resolved_project_config_path = resolve_portable_path(str(project_config_path), base_dir=Path.cwd())
-    project_config = _load_json_mapping(resolved_project_config_path)
+    project_config = normalize_project_config(_load_json_mapping(resolved_project_config_path))
     runtime = project_config.get("runtime") if isinstance(project_config.get("runtime"), dict) else {}
     paths_payload = project_config.get("paths") if isinstance(project_config.get("paths"), dict) else {}
 
@@ -985,14 +986,14 @@ def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[s
 
     graph_path_text = str(runtime.get("workflow_graph_path") or "").strip()
     if not graph_path_text:
-        raise KeyError("项目配置缺少 runtime.workflow_graph_path")
+        raise KeyError("项目配置缺少 runtime.workflow_graph_path（中文主契约键：运行时.流程图路径）")
     graph_path = resolve_portable_path(graph_path_text, base_dir=workspace_root.parent)
     if not graph_path.exists():
         raise FileNotFoundError(f"workflow_graph_path 不存在：{graph_path}")
 
     registry_path_text = str(paths_payload.get("affair_entry_registry_path") or "").strip()
     if not registry_path_text:
-        raise KeyError("项目配置缺少 paths.affair_entry_registry_path")
+        raise KeyError("项目配置缺少 paths.affair_entry_registry_path（中文主契约键：路径.事务入口注册表路径）")
     registry_path = resolve_portable_path(registry_path_text, base_dir=workspace_root)
     if not registry_path.exists():
         raise FileNotFoundError(f"affair_entry_registry_path 不存在：{registry_path}")
@@ -1012,6 +1013,7 @@ def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[s
         node_sequence.append(_node_uid_to_code(node_uid))
 
     records: dict[str, dict[str, Any]] = {}
+    duplicate_node_codes: list[str] = []
     for item in registry_payload.get("records", []):
         if not isinstance(item, dict):
             continue
@@ -1020,6 +1022,8 @@ def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[s
         raw_config_path = str(item.get("config_path") or "").strip()
         if not node_code:
             continue
+        if node_code in records:
+            duplicate_node_codes.append(node_code)
         records[node_code] = {
             "node_code": node_code,
             "affair_uid": affair_uid,
@@ -1029,6 +1033,13 @@ def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[s
             "callable": str(item.get("callable") or "execute").strip() or "execute",
             "source_py_path": str(item.get("source_py_path") or "").strip(),
         }
+
+    if duplicate_node_codes:
+        raise ValueError(
+            "事务入口注册表存在重复 node_code："
+            f"{sorted(set(duplicate_node_codes))}；每个节点编码必须唯一，"
+            "请隔离遗留注册表或去重后再摄入（不采用静默 last-wins）。"
+        )
 
     project_payload = project_config.get("project") if isinstance(project_config.get("project"), dict) else {}
     return {
