@@ -72,7 +72,7 @@ from autodoengine.utils.path_tools import (
     resolve_portable_path,
 )
 from autodoengine.utils.runtime_context import get_runtime_context, set_runtime_context
-from autodoengine.utils.config_normalizer import normalize_project_config
+from autodoengine.utils.config_normalizer import normalize_to_legacy_view
 
 
 def _load_tools_module() -> Any:
@@ -425,7 +425,7 @@ def create_task_request_from_project_node(
     """根据项目级配置与节点编码构造标准事务请求。"""
 
     resolved_project_config_path = resolve_portable_path(str(project_config_path), base_dir=Path.cwd())
-    project_config = normalize_project_config(load_json_or_py(resolved_project_config_path))
+    project_config = normalize_to_legacy_view(load_json_or_py(resolved_project_config_path))
 
     normalized_node_code = str(node_code or "").strip().upper()
     if not normalized_node_code:
@@ -460,7 +460,7 @@ def create_task_request_from_project_node(
         registry_path_text = str((paths_payload or {}).get("affair_entry_registry_path") or "").strip()
         if registry_path_text:
             resolved_registry_path = resolve_portable_path(registry_path_text, base_dir=workspace_root)
-            registry_payload = load_json_or_py(resolved_registry_path)
+            registry_payload = normalize_to_legacy_view(load_json_or_py(resolved_registry_path))
             for item in registry_payload.get("records", []):
                 if not isinstance(item, dict):
                     continue
@@ -971,7 +971,7 @@ def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[s
     """解析项目主链运行上下文。"""
 
     resolved_project_config_path = resolve_portable_path(str(project_config_path), base_dir=Path.cwd())
-    project_config = normalize_project_config(_load_json_mapping(resolved_project_config_path))
+    project_config = normalize_to_legacy_view(_load_json_mapping(resolved_project_config_path))
     runtime = project_config.get("runtime") if isinstance(project_config.get("runtime"), dict) else {}
     paths_payload = project_config.get("paths") if isinstance(project_config.get("paths"), dict) else {}
 
@@ -998,8 +998,8 @@ def _resolve_project_mainflow_context(project_config_path: str | Path) -> Dict[s
     if not registry_path.exists():
         raise FileNotFoundError(f"affair_entry_registry_path 不存在：{registry_path}")
 
-    graph_payload = _load_json_mapping(graph_path)
-    registry_payload = _load_json_mapping(registry_path)
+    graph_payload = normalize_to_legacy_view(_load_json_mapping(graph_path))
+    registry_payload = normalize_to_legacy_view(_load_json_mapping(registry_path))
 
     node_sequence: list[str] = []
     for item in graph_payload.get("nodes", []):

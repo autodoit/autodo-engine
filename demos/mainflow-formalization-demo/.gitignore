@@ -1,0 +1,4 @@
+# 该目录下的工作区由 build_demo_workspace.py 生成，不入库
+workspace/
+.autodoengine/
+__pycache__/
