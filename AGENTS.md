@@ -18,9 +18,8 @@
 
 - 💻 代码仓库 · autodo-engine → `/Users/ethan/CoreFiles/ProjectsFile/autodo-engine`
 - 💻 代码仓库 · autodo-kit → `/Users/ethan/CoreFiles/ProjectsFile/autodo-kit`
-- 💻 代码仓库 · autodo-lib → `/Users/ethan/CoreFiles/ProjectsFile/autodo-lib`
 - 💻 代码仓库 · autodo-app → `/Users/ethan/CoreFiles/ProjectsFile/autodo-app`
-- 📓 笔记 · 笔记：Engs：autodo → `/Users/ethan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Engs_notebook/Projects/autodo`
+- 📓 笔记 · 笔记：Engs：自动运作系统 → `/Users/ethan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Engs_notebook/Projects/自动运作系统`
 - 📓 笔记 · 笔记：ES：通用任务事务运作流程管理 → `/Users/ethan/Library/Mobile Documents/iCloud~md~obsidian/Documents/ES_notebook/Projects/通用任务事务运作流程管理`
 - 🤖 AI Agent · 用户级 Copilot 之 Agents → `/Users/ethan/.copilot/agents`
 - 🛠️ AI Skills · 用户级 Copilot 之 Skills → `/Users/ethan/.copilot/skills`
